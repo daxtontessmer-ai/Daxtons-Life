@@ -1,0 +1,24 @@
+# Secrets and keys — never upload these
+.env
+.env.*
+*.pem
+*.key
+*.p12
+secrets*
+credentials*
+*token*
+
+# System junk
+.DS_Store
+Thumbs.db
+
+# Dependencies and builds
+node_modules/
+dist/
+build/
+
+# Large media (keep the app's own small images in img/)
+*.mov
+*.mp4
+*.zip
+*.psd
