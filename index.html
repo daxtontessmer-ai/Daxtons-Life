@@ -33,6 +33,8 @@
   h1 span { display:block; }
   .line { height:2px; width:56px; background:var(--ink); margin-top:22px; transform-origin:left;
           animation:grow .8s 1.4s cubic-bezier(.2,.7,.2,1) both; }
+  .motto { margin-top:16px; font-size:clamp(16px,4.4vw,21px); font-weight:500; font-style:italic; color:var(--dim);
+           animation:rise .9s 1.7s cubic-bezier(.2,.7,.2,1) both; }
   @keyframes settle { from { transform:scale(1.08); filter:brightness(.6); } to { transform:scale(1); filter:brightness(1); } }
   @keyframes rise { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:none; } }
   @keyframes grow { from { transform:scaleX(0); } to { transform:scaleX(1); } }
@@ -46,6 +48,7 @@
     <p class="hello">Hello Daxton,</p>
     <h1><span>let's take over</span><span>the world.</span></h1>
     <div class="line"></div>
+    <p class="motto">If it's not a hell yes, it's a no.</p>
   </main>
 <script>
   document.getElementById("day").textContent =
