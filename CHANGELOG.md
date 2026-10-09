@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-09
 
+- **2:15 PM CT — v8: Daxton's Portfolio** (Claude, `testing` branch)
+  Added a light "Daxton's Portfolio" pill under the others (no dropdown). Tapping it slides your portfolio page (daxtontessmer-ai.github.io/DaxtonTessmer) in over the app. "‹ Back" (or swiping right on the top bar) slides back. "Open" shows it in Safari. Not on `main` yet.
+
 - **2:05 PM CT — v7: hold to edit or delete** (Claude, `testing` branch)
   Removed the Remove, Rename, Edit and × buttons. Hold a person, item or note for about half a second to change or delete it. Tapping still opens and closes as before. Deleting a person or item takes two taps so nothing goes by accident. Not on `main` yet.
 
