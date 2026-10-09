@@ -50,6 +50,7 @@
     .pill { display:inline-flex; align-items:center; gap:8px; font:inherit; font-size:14px; font-weight:600;
             color:var(--ink); background:rgba(20,20,20,.55); border:1px solid rgba(244,241,234,.22);
             border-radius:999px; padding:9px 16px; cursor:pointer; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
+    .pills { display:flex; flex-wrap:wrap; gap:8px; }
     .pill:active { transform:scale(.98); }
     .pill .n { font-size:12px; color:var(--dim); font-weight:500; }
     .chev { width:10px; height:10px; transition:transform .2s; }
@@ -79,105 +80,107 @@
     .rm { border:0; background:none; color:var(--dim); font:inherit; font-size:12px; cursor:pointer; padding:0; text-decoration:underline; }
     .empty { font-size:13px; color:var(--dim); padding:10px 4px 2px; }
   </style>
-  <section class="rel">
-    <button class="pill" id="relBtn" aria-expanded="false" aria-controls="relPanel">
-      Relationships <span class="n" id="relCount"></span>
-      <svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-    </button>
-    <div class="panel" id="relPanel" hidden>
-      <form class="row" id="personForm">
-        <input id="personIn" placeholder="Add a person" maxlength="60" autocomplete="off">
-        <button class="add" type="submit">Add</button>
-      </form>
-      <ul class="people" id="people"></ul>
-    </div>
+  <section class="rel" id="rel">
+    <div class="pills" id="pills"></div>
+    <div id="panels"></div>
   </section>
   <script>
   (() => {
-    const MAX = 15, LS = "dl-relationships";
+    // Each pill works the same way: add items, tap an item to open its notes (max 15 words each).
+    // Everything saves on this device. Relationships keeps its original storage key so existing notes stay.
+    const SECTIONS = [
+      { key:"rel",    title:"Relationships", ls:"dl-relationships", addPh:"Add a person",          notePh:"A story, desire, or thing to remember", rmLabel:"Remove person", empty:"No one yet. Add your first person above." },
+      { key:"justdo", title:"Just dos",      ls:"dl-justdos",       addPh:"Add something to just do", notePh:"A detail, step, or reminder",        rmLabel:"Remove",        empty:"Nothing yet. Add your first one above." },
+      { key:"work",   title:"Work",          ls:"dl-work",          addPh:"Add a work item",       notePh:"A task, idea, or thing to remember",   rmLabel:"Remove",        empty:"Nothing yet. Add your first work item above." },
+      { key:"school", title:"School",        ls:"dl-school",        addPh:"Add a class or project", notePh:"An assignment, idea, or reminder",    rmLabel:"Remove",        empty:"Nothing yet. Add your first class or project above." }
+    ];
+    const MAX = 15;
+    const CHEV = '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
     const words = s => s.trim().split(/\s+/).filter(Boolean).length;
-    const $ = id => document.getElementById(id);
-    let people = [], open = new Set(), drafts = {}, focusId = null;
-    let col = null; // db collection when available
-  
-    // Local fallback until (or unless) the shared store answers
-    try { people = JSON.parse(localStorage.getItem(LS) || "[]"); } catch (e) {}
-    const saveLocal = () => { try { localStorage.setItem(LS, JSON.stringify(people)); } catch (e) {} };
-  
-    $("relBtn").onclick = () => {
-      const p = $("relPanel"), on = p.hidden;
-      p.hidden = !on; $("relBtn").setAttribute("aria-expanded", on);
-    };
-  
-    async function addPerson(name) {
-      const rec = { name, created: Date.now(), notes: [] };
-      if (col) { const ref = await col.add(rec); open.add(ref.id); focusId = ref.id; }
-      else { const id = "p" + Date.now(); people.push({ id, ...rec }); open.add(id); focusId = id; saveLocal(); render(); }
-    }
-    async function setNotes(p, notes) {
-      if (col) await col.doc(p.id).update({ notes });
-      else { p.notes = notes; saveLocal(); render(); }
-    }
-    async function removePerson(p) {
-      if (!confirm("Remove " + p.name + " and everything saved about them?")) return;
-      open.delete(p.id);
-      if (col) await col.doc(p.id).delete();
-      else { people = people.filter(x => x.id !== p.id); saveLocal(); render(); }
-    }
-  
-    $("personForm").onsubmit = e => {
-      e.preventDefault();
-      const v = $("personIn").value.trim();
-      if (!v) return;
-      $("personIn").value = "";
-      addPerson(v).catch(() => alert("Couldn't save that person. Try again."));
-    };
-  
-    function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
-  
-    function render() {
-      people.sort((a, b) => (a.created || 0) - (b.created || 0));
-      $("relCount").textContent = people.length ? people.length : "";
-      const list = $("people"); list.replaceChildren();
-      if (!people.length) list.append(el("li", "empty", "No one yet. Add your first person above."));
-      for (const p of people) {
-        const li = el("li", "person"), isOpen = open.has(p.id);
-        const b = el("button", "pill"); b.setAttribute("aria-expanded", isOpen);
-        b.append(el("span", "nm", p.name), el("span", "n", (p.notes || []).length || ""));
-        b.insertAdjacentHTML("beforeend", '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>');
-        b.onclick = () => { isOpen ? open.delete(p.id) : open.add(p.id); render(); };
-        li.append(b);
-        if (isOpen) {
-          const box = el("div", "notes"), ul = el("ul");
-          (p.notes || []).forEach((t, i) => {
-            const n = el("li", "note"); n.append(el("span", null, t));
-            const x = el("button", "x", "×"); x.setAttribute("aria-label", "Delete");
-            x.onclick = () => setNotes(p, p.notes.filter((_, j) => j !== i)).catch(() => alert("Couldn't delete. Try again."));
-            n.append(x); ul.append(n);
-          });
-          const f = el("form", "row"), inp = el("input"), add = el("button", "add", "Add");
-          inp.placeholder = "A story, desire, or thing to remember"; inp.autocomplete = "off";
-          inp.value = drafts[p.id] || ""; add.type = "submit";
-          const meta = el("div", "meta"), cnt = el("span"), rm = el("button", "rm", "Remove person");
-          rm.type = "button"; rm.onclick = () => removePerson(p).catch(() => alert("Couldn't remove. Try again."));
-          const upd = () => { const w = words(inp.value); cnt.textContent = w + " / " + MAX + " words"; cnt.className = w > MAX ? "over" : ""; add.disabled = !w || w > MAX; };
-          inp.oninput = () => { drafts[p.id] = inp.value; upd(); }; upd();
-          f.onsubmit = e => {
-            e.preventDefault();
-            const v = inp.value.trim().replace(/\s+/g, " ");
-            if (!v || words(v) > MAX) return;
-            drafts[p.id] = ""; focusId = p.id;
-            setNotes(p, [...(p.notes || []), v]).catch(() => { drafts[p.id] = v; alert("Couldn't save. Try again."); render(); });
-          };
-          f.append(inp, add); meta.append(cnt, rm);
-          box.append(ul, f, meta); li.append(box);
-          if (focusId === p.id) { focusId = null; setTimeout(() => inp.focus(), 0); }
+    const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+    const pillsBox = document.getElementById("pills"), panelsBox = document.getElementById("panels");
+    const all = [];
+
+    function makeSection(cfg) {
+      let items = [], open = new Set(), drafts = {}, focusId = null;
+      try { items = JSON.parse(localStorage.getItem(cfg.ls) || "[]"); } catch (e) {}
+      const save = () => { try { localStorage.setItem(cfg.ls, JSON.stringify(items)); } catch (e) {} };
+
+      const btn = el("button", "pill"); btn.setAttribute("aria-expanded", "false");
+      const count = el("span", "n");
+      btn.append(document.createTextNode(cfg.title + " "), count); btn.insertAdjacentHTML("beforeend", CHEV);
+      const panel = el("div", "panel"); panel.hidden = true;
+      const form = el("form", "row"), input = el("input"), addBtn = el("button", "add", "Add");
+      input.placeholder = cfg.addPh; input.maxLength = 60; input.autocomplete = "off"; addBtn.type = "submit";
+      form.append(input, addBtn);
+      const list = el("ul", "people");
+      panel.append(form, list);
+      pillsBox.append(btn); panelsBox.append(panel);
+
+      const sec = { btn, panel, close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } };
+      btn.onclick = () => {
+        const opening = panel.hidden;
+        all.forEach(o => o.close());           // only one pill open at a time
+        if (opening) { panel.hidden = false; btn.setAttribute("aria-expanded", "true"); }
+      };
+      form.onsubmit = e => {
+        e.preventDefault();
+        const v = input.value.trim(); if (!v) return;
+        input.value = "";
+        const id = cfg.key + Date.now();
+        items.push({ id, name: v, created: Date.now(), notes: [] });
+        open.add(id); focusId = id; save(); render();
+      };
+      const setNotes = (it, notes) => { it.notes = notes; save(); render(); };
+      const remove = it => {
+        if (!confirm("Remove " + it.name + " and everything saved under it?")) return;
+        open.delete(it.id); items = items.filter(x => x.id !== it.id); save(); render();
+      };
+
+      function render() {
+        items.sort((a, b) => (a.created || 0) - (b.created || 0));
+        count.textContent = items.length || "";
+        list.replaceChildren();
+        if (!items.length) list.append(el("li", "empty", cfg.empty));
+        for (const it of items) {
+          const li = el("li", "person"), isOpen = open.has(it.id);
+          const b = el("button", "pill"); b.setAttribute("aria-expanded", isOpen);
+          b.append(el("span", "nm", it.name), el("span", "n", (it.notes || []).length || ""));
+          b.insertAdjacentHTML("beforeend", CHEV);
+          b.onclick = () => { isOpen ? open.delete(it.id) : open.add(it.id); render(); };
+          li.append(b);
+          if (isOpen) {
+            const box = el("div", "notes"), ul = el("ul");
+            (it.notes || []).forEach((t, i) => {
+              const n = el("li", "note"); n.append(el("span", null, t));
+              const x = el("button", "x", "×"); x.setAttribute("aria-label", "Delete");
+              x.onclick = () => setNotes(it, it.notes.filter((_, j) => j !== i));
+              n.append(x); ul.append(n);
+            });
+            const f = el("form", "row"), inp = el("input"), add = el("button", "add", "Add");
+            inp.placeholder = cfg.notePh; inp.autocomplete = "off"; inp.value = drafts[it.id] || ""; add.type = "submit";
+            const meta = el("div", "meta"), cnt = el("span"), rm = el("button", "rm", cfg.rmLabel);
+            rm.type = "button"; rm.onclick = () => remove(it);
+            const upd = () => { const w = words(inp.value); cnt.textContent = w + " / " + MAX + " words"; cnt.className = w > MAX ? "over" : ""; add.disabled = !w || w > MAX; };
+            inp.oninput = () => { drafts[it.id] = inp.value; upd(); }; upd();
+            f.onsubmit = e => {
+              e.preventDefault();
+              const v = inp.value.trim().replace(/\s+/g, " ");
+              if (!v || words(v) > MAX) return;
+              drafts[it.id] = ""; focusId = it.id;
+              setNotes(it, [...(it.notes || []), v]);
+            };
+            f.append(inp, add); meta.append(cnt, rm);
+            box.append(ul, f, meta); li.append(box);
+            if (focusId === it.id) { focusId = null; setTimeout(() => inp.focus(), 0); }
+          }
+          list.append(li);
         }
-        list.append(li);
       }
+      render();
+      return sec;
     }
-    render();
-  
+    SECTIONS.forEach(c => all.push(makeSection(c)));
   })();
   </script>
   <main>

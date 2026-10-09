@@ -2,6 +2,11 @@
 
 Every commit gets a summary and timestamp here (Central Time). Newest first.
 
+## 2026-10-09
+
+- **1:52 AM CT — v4: Just dos, Work, School** (Claude, `testing` branch)
+  Added three new pills next to Relationships, each working the same way: add items, tap one to add notes (15 words max). Only one pill opens at a time. Existing Relationships notes are kept. Not on `main` yet.
+
 ## 2026-10-08
 
 - **8:01 PM CT — v3: Relationships** (Claude)
