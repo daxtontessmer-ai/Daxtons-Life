@@ -44,6 +44,142 @@
 <body>
   <div class="hero"><img src="img/daxton.jpg" alt="Daxton leaning on an ATV, covered in mud"></div>
   <div class="top"><span>Daxton's Life</span><span id="day"></span></div>
+<style>
+    .rel { position:fixed; z-index:3; left:0; right:0; top:calc(44px + env(safe-area-inset-top));
+           padding:0 16px; max-width:640px; margin:0 auto; animation:rise .9s .3s cubic-bezier(.2,.7,.2,1) both; }
+    .pill { display:inline-flex; align-items:center; gap:8px; font:inherit; font-size:14px; font-weight:600;
+            color:var(--ink); background:rgba(20,20,20,.55); border:1px solid rgba(244,241,234,.22);
+            border-radius:999px; padding:9px 16px; cursor:pointer; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
+    .pill:active { transform:scale(.98); }
+    .pill .n { font-size:12px; color:var(--dim); font-weight:500; }
+    .chev { width:10px; height:10px; transition:transform .2s; }
+    [aria-expanded="true"] > .chev { transform:rotate(180deg); }
+    .panel { margin-top:10px; background:rgba(16,16,16,.78); border:1px solid rgba(244,241,234,.14); border-radius:20px;
+             padding:12px; max-height:calc(100dvh - 200px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow-y:auto;
+             -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); overscroll-behavior:contain; }
+    .row { display:flex; gap:8px; }
+    .row input { flex:1; min-width:0; font:inherit; font-size:16px; color:var(--ink); background:rgba(244,241,234,.08);
+                 border:1px solid rgba(244,241,234,.16); border-radius:999px; padding:9px 14px; outline:none; }
+    .row input:focus { border-color:rgba(244,241,234,.5); }
+    .row input::placeholder { color:rgba(244,241,234,.45); }
+    .add { font:inherit; font-size:14px; font-weight:600; border:0; border-radius:999px; padding:0 16px;
+           background:var(--ink); color:#0b0b0b; cursor:pointer; }
+    .add:disabled { opacity:.35; }
+    .people { list-style:none; padding:0; margin-top:10px; display:flex; flex-direction:column; gap:8px; }
+    .person > .pill { width:100%; justify-content:space-between; background:rgba(244,241,234,.06); }
+    .person > .pill .nm { flex:1; text-align:left; }
+    .notes { margin:8px 0 4px 14px; padding-left:12px; border-left:1px solid rgba(244,241,234,.16); }
+    .notes ul { list-style:none; padding:0; display:flex; flex-direction:column; gap:6px; margin-bottom:8px; }
+    .note { display:flex; align-items:flex-start; gap:8px; background:rgba(244,241,234,.1); border-radius:16px;
+            padding:8px 8px 8px 14px; font-size:14px; line-height:1.35; }
+    .note span { flex:1; overflow-wrap:anywhere; }
+    .x { flex:none; border:0; background:none; color:var(--dim); font-size:18px; line-height:1; cursor:pointer; padding:0 4px; }
+    .meta { display:flex; justify-content:space-between; font-size:12px; color:var(--dim); margin:6px 4px 0; }
+    .meta .over { color:#ff8a7a; }
+    .rm { border:0; background:none; color:var(--dim); font:inherit; font-size:12px; cursor:pointer; padding:0; text-decoration:underline; }
+    .empty { font-size:13px; color:var(--dim); padding:10px 4px 2px; }
+  </style>
+  <section class="rel">
+    <button class="pill" id="relBtn" aria-expanded="false" aria-controls="relPanel">
+      Relationships <span class="n" id="relCount"></span>
+      <svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+    <div class="panel" id="relPanel" hidden>
+      <form class="row" id="personForm">
+        <input id="personIn" placeholder="Add a person" maxlength="60" autocomplete="off">
+        <button class="add" type="submit">Add</button>
+      </form>
+      <ul class="people" id="people"></ul>
+    </div>
+  </section>
+  <script>
+  (() => {
+    const MAX = 15, LS = "dl-relationships";
+    const words = s => s.trim().split(/\s+/).filter(Boolean).length;
+    const $ = id => document.getElementById(id);
+    let people = [], open = new Set(), drafts = {}, focusId = null;
+    let col = null; // db collection when available
+  
+    // Local fallback until (or unless) the shared store answers
+    try { people = JSON.parse(localStorage.getItem(LS) || "[]"); } catch (e) {}
+    const saveLocal = () => { try { localStorage.setItem(LS, JSON.stringify(people)); } catch (e) {} };
+  
+    $("relBtn").onclick = () => {
+      const p = $("relPanel"), on = p.hidden;
+      p.hidden = !on; $("relBtn").setAttribute("aria-expanded", on);
+    };
+  
+    async function addPerson(name) {
+      const rec = { name, created: Date.now(), notes: [] };
+      if (col) { const ref = await col.add(rec); open.add(ref.id); focusId = ref.id; }
+      else { const id = "p" + Date.now(); people.push({ id, ...rec }); open.add(id); focusId = id; saveLocal(); render(); }
+    }
+    async function setNotes(p, notes) {
+      if (col) await col.doc(p.id).update({ notes });
+      else { p.notes = notes; saveLocal(); render(); }
+    }
+    async function removePerson(p) {
+      if (!confirm("Remove " + p.name + " and everything saved about them?")) return;
+      open.delete(p.id);
+      if (col) await col.doc(p.id).delete();
+      else { people = people.filter(x => x.id !== p.id); saveLocal(); render(); }
+    }
+  
+    $("personForm").onsubmit = e => {
+      e.preventDefault();
+      const v = $("personIn").value.trim();
+      if (!v) return;
+      $("personIn").value = "";
+      addPerson(v).catch(() => alert("Couldn't save that person. Try again."));
+    };
+  
+    function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+  
+    function render() {
+      people.sort((a, b) => (a.created || 0) - (b.created || 0));
+      $("relCount").textContent = people.length ? people.length : "";
+      const list = $("people"); list.replaceChildren();
+      if (!people.length) list.append(el("li", "empty", "No one yet. Add your first person above."));
+      for (const p of people) {
+        const li = el("li", "person"), isOpen = open.has(p.id);
+        const b = el("button", "pill"); b.setAttribute("aria-expanded", isOpen);
+        b.append(el("span", "nm", p.name), el("span", "n", (p.notes || []).length || ""));
+        b.insertAdjacentHTML("beforeend", '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>');
+        b.onclick = () => { isOpen ? open.delete(p.id) : open.add(p.id); render(); };
+        li.append(b);
+        if (isOpen) {
+          const box = el("div", "notes"), ul = el("ul");
+          (p.notes || []).forEach((t, i) => {
+            const n = el("li", "note"); n.append(el("span", null, t));
+            const x = el("button", "x", "×"); x.setAttribute("aria-label", "Delete");
+            x.onclick = () => setNotes(p, p.notes.filter((_, j) => j !== i)).catch(() => alert("Couldn't delete. Try again."));
+            n.append(x); ul.append(n);
+          });
+          const f = el("form", "row"), inp = el("input"), add = el("button", "add", "Add");
+          inp.placeholder = "A story, desire, or thing to remember"; inp.autocomplete = "off";
+          inp.value = drafts[p.id] || ""; add.type = "submit";
+          const meta = el("div", "meta"), cnt = el("span"), rm = el("button", "rm", "Remove person");
+          rm.type = "button"; rm.onclick = () => removePerson(p).catch(() => alert("Couldn't remove. Try again."));
+          const upd = () => { const w = words(inp.value); cnt.textContent = w + " / " + MAX + " words"; cnt.className = w > MAX ? "over" : ""; add.disabled = !w || w > MAX; };
+          inp.oninput = () => { drafts[p.id] = inp.value; upd(); }; upd();
+          f.onsubmit = e => {
+            e.preventDefault();
+            const v = inp.value.trim().replace(/\s+/g, " ");
+            if (!v || words(v) > MAX) return;
+            drafts[p.id] = ""; focusId = p.id;
+            setNotes(p, [...(p.notes || []), v]).catch(() => { drafts[p.id] = v; alert("Couldn't save. Try again."); render(); });
+          };
+          f.append(inp, add); meta.append(cnt, rm);
+          box.append(ul, f, meta); li.append(box);
+          if (focusId === p.id) { focusId = null; setTimeout(() => inp.focus(), 0); }
+        }
+        list.append(li);
+      }
+    }
+    render();
+  
+  })();
+  </script>
   <main>
     <p class="hello">Hello Daxton,</p>
     <h1><span>let's take over</span><span>the world.</span></h1>
