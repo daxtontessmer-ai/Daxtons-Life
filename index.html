@@ -78,33 +78,182 @@
     .meta { display:flex; justify-content:space-between; font-size:12px; color:var(--dim); margin:6px 4px 0; }
     .meta .over { color:#ff8a7a; }
     .rm { border:0; background:none; color:var(--dim); font:inherit; font-size:12px; cursor:pointer; padding:0; text-decoration:underline; }
+    [hidden] { display:none !important; }
     .empty { font-size:13px; color:var(--dim); padding:10px 4px 2px; }
+    .top { align-items:center; gap:10px; }
+    .top > span:first-child { flex:1; }
+    .syncbtn { font:inherit; font-size:11px; letter-spacing:.1em; text-transform:uppercase; font-weight:600; color:var(--dim);
+               background:rgba(20,20,20,.5); border:1px solid rgba(244,241,234,.2); border-radius:999px; padding:4px 10px; cursor:pointer; }
+    .syncbtn::before { content:""; display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:6px; vertical-align:1px; background:#8a8a8a; }
+    .syncbtn[data-state="ok"]::before { background:#7fd18b; }
+    .syncbtn[data-state="syncing"]::before { background:#e8d27a; }
+    .syncbtn[data-state="error"]::before, .syncbtn[data-state="auth"]::before { background:#ff8a7a; }
+    .sheet { position:fixed; inset:0; z-index:10; background:rgba(0,0,0,.55); display:flex; align-items:flex-end; justify-content:center;
+             padding:16px 16px calc(16px + env(safe-area-inset-bottom)); }
+    .sheet-card { width:100%; max-width:520px; background:#161616; border:1px solid rgba(244,241,234,.16); border-radius:22px; padding:18px;
+                  display:flex; flex-direction:column; gap:12px; }
+    .sheet-card h2 { font-size:18px; font-weight:700; }
+    .sheet-card p { font-size:14px; line-height:1.45; color:var(--dim); }
+    .sheet-card b { color:var(--ink); font-weight:600; }
+    .sheet-msg:empty { display:none; }
+    .sheet-actions { display:flex; flex-wrap:wrap; gap:16px; }
   </style>
   <section class="rel" id="rel">
     <div class="pills" id="pills"></div>
     <div id="panels"></div>
   </section>
+  <div class="sheet" id="syncSheet" hidden>
+    <div class="sheet-card" role="dialog" aria-labelledby="syncTitle">
+      <h2 id="syncTitle">Sync your notes</h2>
+      <p id="syncInfo">Notes save to your private GitHub repo <b>daxtons-life-data</b>, so every device shows the same thing.</p>
+      <form class="row" id="syncForm">
+        <input id="syncToken" type="password" placeholder="Paste your GitHub sync code" autocomplete="off" spellcheck="false">
+        <button class="add" type="submit">Connect</button>
+      </form>
+      <p class="sheet-msg" id="syncMsg"></p>
+      <div class="sheet-actions">
+        <button class="rm" type="button" id="syncNow" hidden>Sync now</button>
+        <button class="rm" type="button" id="syncOff" hidden>Turn off sync on this device</button>
+        <button class="rm" type="button" id="syncClose">Close</button>
+      </div>
+    </div>
+  </div>
   <script>
   (() => {
-    // Each pill works the same way: add items, tap an item to open its notes (max 15 words each).
-    // Everything saves on this device. Relationships keeps its original storage key so existing notes stay.
+    // ---------- Sections: each pill works the same way ----------
     const SECTIONS = [
-      { key:"rel",    title:"Relationships", ls:"dl-relationships", addPh:"Add a person",          notePh:"A story, desire, or thing to remember", rmLabel:"Remove person", empty:"No one yet. Add your first person above." },
-      { key:"justdo", title:"Just dos",      ls:"dl-justdos",       addPh:"Add something to just do", notePh:"A detail, step, or reminder",        rmLabel:"Remove",        empty:"Nothing yet. Add your first one above." },
-      { key:"work",   title:"Work",          ls:"dl-work",          addPh:"Add a work item",       notePh:"A task, idea, or thing to remember",   rmLabel:"Remove",        empty:"Nothing yet. Add your first work item above." },
-      { key:"school", title:"School",        ls:"dl-school",        addPh:"Add a class or project", notePh:"An assignment, idea, or reminder",    rmLabel:"Remove",        empty:"Nothing yet. Add your first class or project above." }
+      { key:"rel",    title:"Relationships", oldLs:"dl-relationships", addPh:"Add a person",           notePh:"A story, desire, or thing to remember", rmLabel:"Remove person", empty:"No one yet. Add your first person above." },
+      { key:"justdo", title:"Just dos",      oldLs:"dl-justdos",       addPh:"Add something to just do", notePh:"A detail, step, or reminder",         rmLabel:"Remove",        empty:"Nothing yet. Add your first one above." },
+      { key:"work",   title:"Work",          oldLs:"dl-work",          addPh:"Add a work item",        notePh:"A task, idea, or thing to remember",    rmLabel:"Remove",        empty:"Nothing yet. Add your first work item above." },
+      { key:"school", title:"School",        oldLs:"dl-school",        addPh:"Add a class or project", notePh:"An assignment, idea, or reminder",     rmLabel:"Remove",        empty:"Nothing yet. Add your first class or project above." }
     ];
-    const MAX = 15;
+    const MAX = 15, LS = "dl-data", SYNC = "dl-sync";
+    const REPO = "daxtontessmer-ai/daxtons-life-data", FILE = "data.json";
     const CHEV = '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
     const words = s => s.trim().split(/\s+/).filter(Boolean).length;
     const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
-    const pillsBox = document.getElementById("pills"), panelsBox = document.getElementById("panels");
-    const all = [];
+    const $ = id => document.getElementById(id);
+    const now = () => Date.now();
 
+    // ---------- Local store (one object for all sections) ----------
+    const empty = () => ({ version:1, sections:Object.fromEntries(SECTIONS.map(c => [c.key, []])) });
+    let data = empty();
+    try { const d = JSON.parse(localStorage.getItem(LS)); if (d && d.sections) data = d; } catch (e) {}
+    // Bring over notes saved by older versions of the app
+    for (const c of SECTIONS) {
+      data.sections[c.key] = data.sections[c.key] || [];
+      try {
+        const old = JSON.parse(localStorage.getItem(c.oldLs) || "null");
+        if (Array.isArray(old) && old.length) {
+          const have = new Set(data.sections[c.key].map(i => i.id));
+          old.forEach(i => { if (!have.has(i.id)) data.sections[c.key].push({ ...i, updated: i.updated || i.created || now() }); });
+          localStorage.setItem(c.oldLs + "-migrated", JSON.stringify(old)); localStorage.removeItem(c.oldLs);
+        }
+      } catch (e) {}
+    }
+    const saveLocal = () => { try { localStorage.setItem(LS, JSON.stringify(data)); } catch (e) {} };
+    saveLocal();
+    function changed() { saveLocal(); renderAll(); queuePush(); }
+
+    // ---------- Merge: newest edit of each item wins; deletions are remembered ----------
+    function merge(a, b) {
+      const out = empty();
+      for (const c of SECTIONS) {
+        const m = new Map();
+        for (const it of [...((a.sections||{})[c.key]||[]), ...((b.sections||{})[c.key]||[])]) {
+          const cur = m.get(it.id);
+          if (!cur || (it.updated||0) > (cur.updated||0)) m.set(it.id, it);
+        }
+        out.sections[c.key] = [...m.values()];
+      }
+      out.devices = { ...((b||{}).devices||{}) };
+      for (const [k, v] of Object.entries((a||{}).devices||{})) if (!out.devices[k] || (v.last||0) > (out.devices[k].last||0)) out.devices[k] = v;
+      return out;
+    }
+
+    // ---------- GitHub sync ----------
+    let token = ""; try { token = (JSON.parse(localStorage.getItem(SYNC)||"{}").token) || ""; } catch (e) {}
+    let deviceId = ""; try { deviceId = localStorage.getItem("dl-device") || ""; if (!deviceId) { deviceId = "d" + now().toString(36) + Math.random().toString(36).slice(2, 6); localStorage.setItem("dl-device", deviceId); } } catch (e) { deviceId = "d-temp"; }
+    const deviceName = () => { const u = navigator.userAgent; return /iPhone/.test(u) ? "iPhone" : /iPad/.test(u) ? "iPad" : /Mac/.test(u) ? "Mac" : /Android/.test(u) ? "Android" : /Windows/.test(u) ? "Windows" : "Device"; };
+    let sha = null, pushTimer = null, busy = false, again = false, lastSync = null, status = "off";
+    const b64e = s => { const u = new TextEncoder().encode(s); let bin = ""; u.forEach(x => bin += String.fromCharCode(x)); return btoa(bin); };
+    const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g, "")), ch => ch.charCodeAt(0)));
+    const api = (method, body) => fetch(`https://api.github.com/repos/${REPO}/contents/${FILE}`, {
+      method, cache:"no-store",
+      headers:{ Authorization:"Bearer " + token, Accept:"application/vnd.github+json", "X-GitHub-Api-Version":"2022-11-28" },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    async function pull() {
+      const r = await api("GET");
+      if (r.status === 404) { sha = null; return empty(); }
+      if (r.status === 401 || r.status === 403) throw Object.assign(new Error("auth"), { auth:true });
+      if (!r.ok) throw new Error("pull " + r.status);
+      const j = await r.json(); sha = j.sha; return JSON.parse(b64d(j.content));
+    }
+    async function sync() {
+      if (!token) { setStatus("off"); return; }
+      if (!navigator.onLine) { setStatus("offline"); return; }
+      if (busy) { again = true; return; }
+      busy = true; setStatus("syncing");
+      try {
+        for (let tries = 0; tries < 3; tries++) {
+          const remote = await pull();
+          const merged = merge(data, remote);
+          const prev = (merged.devices||{})[deviceId];
+          if (!prev || now() - (prev.last||0) > 6 * 3600e3) { merged.devices = { ...(merged.devices||{}), [deviceId]: { name: deviceName(), last: now() } }; }
+          const before = JSON.stringify(data); data = merged; saveLocal();
+          if (JSON.stringify(data) !== before) renderAll();
+          if (JSON.stringify(merge(remote, empty())) === JSON.stringify(merge(merged, empty()))) break; // GitHub already up to date
+          const r = await api("PUT", { message:"Notes update " + new Date().toLocaleString(), content:b64e(JSON.stringify(merged, null, 1)), sha: sha || undefined });
+          if (r.ok) { sha = (await r.json()).content.sha; break; }
+          if (r.status === 401 || r.status === 403) throw Object.assign(new Error("auth"), { auth:true });
+          if (r.status !== 409 && r.status !== 422) throw new Error("push " + r.status); // someone else saved first: pull again
+        }
+        lastSync = new Date(); setStatus("ok");
+      } catch (e) { setStatus(e.auth ? "auth" : (navigator.onLine ? "error" : "offline")); }
+      busy = false;
+      if (again) { again = false; sync(); }
+    }
+    function queuePush() { if (!token) return; clearTimeout(pushTimer); pushTimer = setTimeout(sync, 1200); }
+    addEventListener("online", sync);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) sync(); });
+    setInterval(() => { if (!document.hidden) sync(); }, 60000);
+
+    // ---------- Sync button + sheet ----------
+    const top = document.querySelector(".top");
+    const syncBtn = el("button", "syncbtn"); syncBtn.type = "button";
+    top.insertBefore(syncBtn, top.lastElementChild);
+    function setStatus(s) {
+      status = s;
+      const t = { off:"Sync off", syncing:"Syncing…", ok:"Synced", offline:"Offline", error:"Sync error", auth:"Sync code invalid" }[s];
+      syncBtn.textContent = t; syncBtn.dataset.state = s;
+      $("syncNow").hidden = $("syncOff").hidden = !token; $("syncForm").hidden = !!token && s !== "auth";
+      $("syncMsg").textContent =
+        s === "ok" ? "Connected. Last synced " + lastSync.toLocaleTimeString([], { hour:"numeric", minute:"2-digit" }) + "." :
+        s === "offline" ? "No signal. Your notes are saved here and will sync when you're back online." :
+        s === "error" ? "Couldn't reach GitHub. Your notes are saved here; it will try again." :
+        s === "auth" ? "GitHub didn't accept that sync code. Paste a new one." :
+        s === "syncing" ? "Syncing…" : "";
+    }
+    syncBtn.onclick = () => { $("syncSheet").hidden = false; };
+    $("syncClose").onclick = () => { $("syncSheet").hidden = true; };
+    $("syncSheet").onclick = e => { if (e.target.id === "syncSheet") $("syncSheet").hidden = true; };
+    $("syncNow").onclick = () => sync();
+    $("syncOff").onclick = () => { token = ""; sha = null; try { localStorage.removeItem(SYNC); } catch (e) {} setStatus("off"); };
+    $("syncForm").onsubmit = e => {
+      e.preventDefault();
+      const v = $("syncToken").value.trim(); if (!v) return;
+      token = v; $("syncToken").value = "";
+      try { localStorage.setItem(SYNC, JSON.stringify({ token:v })); } catch (e) {}
+      sync();
+    };
+
+    // ---------- Pills ----------
+    const pillsBox = $("pills"), panelsBox = $("panels"), all = [];
     function makeSection(cfg) {
-      let items = [], open = new Set(), drafts = {}, focusId = null;
-      try { items = JSON.parse(localStorage.getItem(cfg.ls) || "[]"); } catch (e) {}
-      const save = () => { try { localStorage.setItem(cfg.ls, JSON.stringify(items)); } catch (e) {} };
+      const open = new Set(), drafts = {}; let focusId = null;
+      const list_ = () => data.sections[cfg.key];
+      const live = () => list_().filter(i => !i.deleted);
 
       const btn = el("button", "pill"); btn.setAttribute("aria-expanded", "false");
       const count = el("span", "n");
@@ -117,28 +266,30 @@
       panel.append(form, list);
       pillsBox.append(btn); panelsBox.append(panel);
 
-      const sec = { btn, panel, close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } };
+      const sec = { render, close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } };
       btn.onclick = () => {
         const opening = panel.hidden;
-        all.forEach(o => o.close());           // only one pill open at a time
+        all.forEach(o => o.close());
         if (opening) { panel.hidden = false; btn.setAttribute("aria-expanded", "true"); }
       };
       form.onsubmit = e => {
         e.preventDefault();
         const v = input.value.trim(); if (!v) return;
         input.value = "";
-        const id = cfg.key + Date.now();
-        items.push({ id, name: v, created: Date.now(), notes: [] });
-        open.add(id); focusId = id; save(); render();
+        const id = cfg.key + now() + Math.random().toString(36).slice(2, 6);
+        list_().push({ id, name: v, created: now(), updated: now(), notes: [] });
+        open.add(id); focusId = id; changed();
       };
-      const setNotes = (it, notes) => { it.notes = notes; save(); render(); };
+      const setNotes = (it, notes) => { it.notes = notes; it.updated = now(); changed(); };
       const remove = it => {
         if (!confirm("Remove " + it.name + " and everything saved under it?")) return;
-        open.delete(it.id); items = items.filter(x => x.id !== it.id); save(); render();
+        open.delete(it.id);
+        Object.assign(it, { deleted:true, notes:[], updated:now() });
+        changed();
       };
 
       function render() {
-        items.sort((a, b) => (a.created || 0) - (b.created || 0));
+        const items = live().sort((a, b) => (a.created || 0) - (b.created || 0));
         count.textContent = items.length || "";
         list.replaceChildren();
         if (!items.length) list.append(el("li", "empty", cfg.empty));
@@ -177,10 +328,13 @@
           list.append(li);
         }
       }
-      render();
       return sec;
     }
     SECTIONS.forEach(c => all.push(makeSection(c)));
+    function renderAll() { all.forEach(s => s.render()); }
+    renderAll();
+    setStatus(token ? "syncing" : "off");
+    sync();
   })();
   </script>
   <main>

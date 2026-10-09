@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-09
 
+- **2:05 AM CT — v5: notes sync everywhere** (Claude)
+  Notes in all four pills now save to the private repo `daxtons-life-data`, so your phone, your Mac, and anyone you give the sync code to all see the same notes. Tap the Sync button (top right) and paste the sync code once per device. Works offline and catches up when back online. Deleting on one device removes it everywhere. Notes already on a phone carry over. Fixed the offline helper so it never serves old copies of your notes.
+
 - **1:52 AM CT — v4: Just dos, Work, School** (Claude, `testing` branch)
   Added three new pills next to Relationships, each working the same way: add items, tap one to add notes (15 words max). Only one pill opens at a time. Existing Relationships notes are kept. Not on `main` yet.
 
