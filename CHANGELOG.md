@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-09
 
+- **2:20 PM CT — v9: Live by** (Claude, `testing` branch)
+  Added a "Live by" pill next to School. Tap it to add things to live by, each up to 15 words. Each one is its own pill with nothing underneath it (no second layer). Hold one to edit or delete it. Syncs like the others. Not on `main` yet.
+
 - **2:15 PM CT — v8: Daxton's Portfolio** (Claude, `testing` branch)
   Added a light "Daxton's Portfolio" pill under the others (no dropdown). Tapping it slides your portfolio page (daxtontessmer-ai.github.io/DaxtonTessmer) in over the app. "‹ Back" (or swiping right on the top bar) slides back. "Open" shows it in Safari. Not on `main` yet.
 

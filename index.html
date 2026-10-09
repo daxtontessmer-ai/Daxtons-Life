@@ -80,6 +80,7 @@
     .meta .over { color:#ff8a7a; }
     .rm { border:0; background:none; color:var(--dim); font:inherit; font-size:12px; cursor:pointer; padding:0; text-decoration:underline; }
     [hidden] { display:none !important; }
+    .flat { list-style:none; padding:0; margin-top:10px; display:flex; flex-direction:column; gap:6px; }
     .pill-go { background:rgba(244,241,234,.9); color:#0b0b0b; border-color:transparent; }
     .pf-page { position:fixed; inset:0; z-index:20; background:#0b0b0b; display:flex; flex-direction:column;
                transform:translateX(100%); transition:transform .36s cubic-bezier(.2,.7,.2,1); }
@@ -170,7 +171,8 @@
       { key:"rel",    title:"Relationships", oldLs:"dl-relationships", addPh:"Add a person",           notePh:"A story, desire, or thing to remember", rmLabel:"Remove person", empty:"No one yet. Add your first person above." },
       { key:"justdo", title:"Just dos",      oldLs:"dl-justdos",       addPh:"Add something to just do", notePh:"A detail, step, or reminder",         rmLabel:"Remove",        empty:"Nothing yet. Add your first one above." },
       { key:"work",   title:"Work",          oldLs:"dl-work",          addPh:"Add a work item",        notePh:"A task, idea, or thing to remember",    rmLabel:"Remove",        empty:"Nothing yet. Add your first work item above." },
-      { key:"school", title:"School",        oldLs:"dl-school",        addPh:"Add a class or project", notePh:"An assignment, idea, or reminder",     rmLabel:"Remove",        empty:"Nothing yet. Add your first class or project above." }
+      { key:"school", title:"School",        oldLs:"dl-school",        addPh:"Add a class or project", notePh:"An assignment, idea, or reminder",     rmLabel:"Remove",        empty:"Nothing yet. Add your first class or project above." },
+      { key:"liveby", title:"Live by",       oldLs:"dl-liveby",        addPh:"Something to live by",   flat:true,                                                                empty:"Nothing yet. Add your first one above." }
     ];
     const MAX = 15, LS = "dl-data", SYNC = "dl-sync";
     const REPO = "daxtontessmer-ai/daxtons-life-data", FILE = "data.json";
@@ -296,7 +298,7 @@
     // ---------- Pills ----------
     const pillsBox = $("pills"), panelsBox = $("panels"), all = [];
     function makeSection(cfg) {
-      const open = new Set(), drafts = {}; let focusId = null;
+      const open = new Set(), drafts = {}; let focusId = null, sec_upd = null;
       let editing = null; // { id, i, text } while changing a note, or { id, rename:true, text } while renaming
       const list_ = () => data.sections[cfg.key];
       const live = () => list_().filter(i => !i.deleted);
@@ -310,6 +312,16 @@
       form.append(input, addBtn);
       const list = el("ul", "people");
       panel.append(form, list);
+      // "Flat" pills (Live by): each entry is its own 15-word pill, no second layer underneath
+      let flatMeta = null;
+      if (cfg.flat) {
+        list.className = "flat";
+        input.removeAttribute("maxlength");
+        flatMeta = el("div", "meta"); const fc = el("span"); flatMeta.append(fc, el("span", "hint", "Hold to edit or delete"));
+        const upd = () => { const w = words(input.value); fc.textContent = w + " / " + MAX + " words"; fc.className = w > MAX ? "over" : ""; addBtn.disabled = !w || w > MAX; };
+        input.oninput = upd; upd(); sec_upd = upd;
+        form.after(flatMeta);
+      }
       pillsBox.append(btn); panelsBox.append(panel);
 
       const sec = { render, close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } };
@@ -320,8 +332,9 @@
       };
       form.onsubmit = e => {
         e.preventDefault();
-        const v = input.value.trim(); if (!v) return;
-        input.value = "";
+        const v = input.value.trim().replace(/\s+/g, " "); if (!v) return;
+        if (cfg.flat && words(v) > MAX) return;
+        input.value = ""; if (sec_upd) sec_upd();
         const id = cfg.key + now() + Math.random().toString(36).slice(2, 6);
         list_().push({ id, name: v, created: now(), updated: now(), notes: [] });
         open.add(id); focusId = id; changed();
@@ -347,11 +360,44 @@
         node.addEventListener("click", e => { if (held) { e.preventDefault(); e.stopPropagation(); held = false; return; } if (onTap) onTap(e); });
       }
 
+      function renderFlat(items) {
+        for (const it of items) {
+          const n = el("li", "note");
+          if (editing && editing.id === it.id) {
+            n.classList.add("editing");
+            const f = el("form", "row"), inp = el("input"), save = el("button", "add", "Save");
+            inp.value = editing.text; inp.autocomplete = "off"; save.type = "submit";
+            const meta = el("div", "meta"), cnt = el("span"), links = el("span", "links");
+            const cancel = el("button", "rm", "Cancel"), del = el("button", "rm", "Delete");
+            cancel.type = del.type = "button";
+            const upd = () => { const w = words(inp.value); cnt.textContent = w + " / " + MAX + " words"; cnt.className = w > MAX ? "over" : ""; save.disabled = !w || w > MAX; };
+            inp.oninput = () => { editing.text = inp.value; upd(); }; upd();
+            inp.onkeydown = e => { if (e.key === "Escape") { editing = null; render(); } };
+            cancel.onclick = () => { editing = null; render(); };
+            del.onclick = () => { editing = null; remove(it); };
+            f.onsubmit = e => {
+              e.preventDefault();
+              const v = inp.value.trim().replace(/\s+/g, " ");
+              if (!v || words(v) > MAX) return;
+              editing = null; it.name = v; it.updated = now(); changed();
+            };
+            f.append(inp, save); links.append(cancel, del); meta.append(cnt, links);
+            n.append(f, meta); list.append(n);
+            setTimeout(() => { if (document.activeElement !== inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } }, 0);
+            continue;
+          }
+          n.append(el("span", null, it.name)); n.classList.add("holdable");
+          holdable(n, () => { editing = { id: it.id, text: it.name }; render(); });
+          list.append(n);
+        }
+      }
+
       function render() {
         const items = live().sort((a, b) => (a.created || 0) - (b.created || 0));
         count.textContent = items.length || "";
         list.replaceChildren();
         if (!items.length) list.append(el("li", "empty", cfg.empty));
+        if (cfg.flat) { renderFlat(items); return; }
         for (const it of items) {
           const li = el("li", "person"), isOpen = open.has(it.id);
           const b = el("button", "pill"); b.setAttribute("aria-expanded", isOpen);
