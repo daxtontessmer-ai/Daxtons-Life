@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-09
 
+- **2:05 PM CT — v7: hold to edit or delete** (Claude, `testing` branch)
+  Removed the Remove, Rename, Edit and × buttons. Hold a person, item or note for about half a second to change or delete it. Tapping still opens and closes as before. Deleting a person or item takes two taps so nothing goes by accident. Not on `main` yet.
+
 - **11:20 AM CT — v6: edit notes + faster loading** (Claude, `testing` branch)
   Every note under a person (or any pill item) now has **Edit** and **×**: tap the note or Edit to change it (same 15-word limit), × to delete it. Each person/item also has **Rename**. Faster opening: the app now opens instantly from the copy saved on the phone and checks for updates in the background; if there's a new version, a "Tap to refresh" button appears. Photo shrunk from 345 KB to 186 KB, intro animation shortened from ~2.5s to under 1s, and the big unused icons are no longer downloaded on first open. Not on `main` yet.
 

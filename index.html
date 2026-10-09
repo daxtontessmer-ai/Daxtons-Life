@@ -80,6 +80,11 @@
     .meta .over { color:#ff8a7a; }
     .rm { border:0; background:none; color:var(--dim); font:inherit; font-size:12px; cursor:pointer; padding:0; text-decoration:underline; }
     [hidden] { display:none !important; }
+    .people .pill, .note.holdable { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action:manipulation; }
+    .people .pill.pressing, .note.pressing { transform:scale(.97); background:rgba(244,241,234,.16); transition:transform .45s, background .45s; }
+    .editbox { display:flex; flex-direction:column; gap:6px; padding:8px; border:1px solid rgba(244,241,234,.3); border-radius:18px; background:rgba(244,241,234,.06); }
+    .rm.danger { color:#ff8a7a; }
+    .hint { font-size:12px; color:rgba(244,241,234,.45); }
     .note span { cursor:text; }
     .note.editing { padding:6px; background:rgba(244,241,234,.14); flex-direction:column; align-items:stretch; }
     .note.editing .row input { padding:7px 12px; font-size:16px; }
@@ -294,11 +299,24 @@
       };
       const setNotes = (it, notes) => { it.notes = notes; it.updated = now(); changed(); };
       const remove = it => {
-        if (!confirm("Remove " + it.name + " and everything saved under it?")) return;
         open.delete(it.id);
         Object.assign(it, { deleted:true, notes:[], updated:now() });
         changed();
       };
+      // Hold ~half a second to edit. A normal tap still does the tap action.
+      function holdable(node, onHold, onTap) {
+        let t = null, x0 = 0, y0 = 0, held = false;
+        const cancel = () => { clearTimeout(t); t = null; node.classList.remove("pressing"); };
+        node.addEventListener("pointerdown", e => {
+          if (e.button) return;
+          held = false; x0 = e.clientX; y0 = e.clientY; node.classList.add("pressing");
+          t = setTimeout(() => { held = true; cancel(); if (navigator.vibrate) navigator.vibrate(15); onHold(); }, 480);
+        });
+        node.addEventListener("pointermove", e => { if (t && Math.hypot(e.clientX - x0, e.clientY - y0) > 10) cancel(); });
+        ["pointerup", "pointercancel", "pointerleave"].forEach(ev => node.addEventListener(ev, cancel));
+        node.addEventListener("contextmenu", e => { e.preventDefault(); if (!held) { cancel(); held = true; onHold(); } });
+        node.addEventListener("click", e => { if (held) { e.preventDefault(); e.stopPropagation(); held = false; return; } if (onTap) onTap(e); });
+      }
 
       function render() {
         const items = live().sort((a, b) => (a.created || 0) - (b.created || 0));
@@ -310,7 +328,26 @@
           const b = el("button", "pill"); b.setAttribute("aria-expanded", isOpen);
           b.append(el("span", "nm", it.name), el("span", "n", (it.notes || []).length || ""));
           b.insertAdjacentHTML("beforeend", CHEV);
-          b.onclick = () => { isOpen ? open.delete(it.id) : open.add(it.id); render(); };
+          holdable(b, () => { editing = { id: it.id, rename: true, text: it.name, armed: false }; render(); },
+                      () => { isOpen ? open.delete(it.id) : open.add(it.id); render(); });
+          if (editing && editing.id === it.id && editing.rename) {
+            // Hold menu for a person / item: rename or delete
+            const box = el("div", "editbox");
+            const f = el("form", "row"), ri = el("input"), rs = el("button", "add", "Save");
+            ri.value = editing.text; ri.maxLength = 60; ri.autocomplete = "off"; rs.type = "submit";
+            ri.oninput = () => { editing.text = ri.value; rs.disabled = !ri.value.trim(); };
+            ri.onkeydown = e => { if (e.key === "Escape") { editing = null; render(); } };
+            f.onsubmit = e => { e.preventDefault(); const v = ri.value.trim(); if (!v) return; editing = null; it.name = v; it.updated = now(); changed(); };
+            f.append(ri, rs);
+            const acts = el("div", "meta"), cancel = el("button", "rm", "Cancel");
+            const del = el("button", "rm danger", editing.armed ? "Tap again to delete " + it.name : "Delete");
+            cancel.type = del.type = "button";
+            cancel.onclick = () => { editing = null; render(); };
+            del.onclick = () => { if (!editing.armed) { editing.armed = true; render(); return; } editing = null; remove(it); };
+            acts.append(cancel, del); box.append(f, acts); li.append(box);
+            setTimeout(() => { if (document.activeElement !== ri && !editing?.armed) ri.focus(); }, 0);
+            list.append(li); continue;
+          }
           li.append(b);
           if (isOpen) {
             const box = el("div", "notes"), ul = el("ul");
@@ -341,36 +378,13 @@
                 setTimeout(() => { if (document.activeElement !== inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } }, 0);
                 return;
               }
-              const txt = el("span", null, t); txt.title = "Tap to edit";
-              const ed = el("button", "ed", "Edit"); ed.type = "button"; ed.setAttribute("aria-label", "Edit note");
-              const startEdit = () => { editing = { id: it.id, i, text: t }; render(); };
-              txt.onclick = ed.onclick = startEdit;
-              const x = el("button", "x", "×"); x.setAttribute("aria-label", "Delete note");
-              x.onclick = () => { if (editing && editing.id === it.id) editing = null; setNotes(it, it.notes.filter((_, j) => j !== i)); };
-              n.append(txt, ed, x); ul.append(n);
+              n.append(el("span", null, t)); n.classList.add("holdable");
+              holdable(n, () => { editing = { id: it.id, i, text: t }; render(); });
+              ul.append(n);
             });
             const f = el("form", "row"), inp = el("input"), add = el("button", "add", "Add");
             inp.placeholder = cfg.notePh; inp.autocomplete = "off"; inp.value = drafts[it.id] || ""; add.type = "submit";
-            const meta = el("div", "meta"), cnt = el("span"), rm = el("button", "rm", cfg.rmLabel);
-            rm.type = "button"; rm.onclick = () => remove(it);
-            const rn = el("button", "rm", "Rename"); rn.type = "button";
-            rn.onclick = () => { editing = { id: it.id, rename: true, text: it.name }; render(); };
-            const links = el("span", "links"); links.append(rn, rm);
-            let renameBox = null;
-            if (editing && editing.id === it.id && editing.rename) {
-              renameBox = el("form", "row rename");
-              const ri = el("input"), rs = el("button", "add", "Save"), rc = el("button", "rm", "Cancel");
-              ri.value = editing.text; ri.maxLength = 60; ri.autocomplete = "off"; rs.type = "submit"; rc.type = "button";
-              ri.oninput = () => { editing.text = ri.value; rs.disabled = !ri.value.trim(); };
-              rc.onclick = () => { editing = null; render(); };
-              renameBox.onsubmit = e => {
-                e.preventDefault();
-                const v = ri.value.trim(); if (!v) return;
-                editing = null; it.name = v; it.updated = now(); changed();
-              };
-              renameBox.append(ri, rs, rc);
-              setTimeout(() => { if (document.activeElement !== ri) ri.focus(); }, 0);
-            }
+            const meta = el("div", "meta"), cnt = el("span"), links = el("span", "hint", "Hold to edit or delete");
             const upd = () => { const w = words(inp.value); cnt.textContent = w + " / " + MAX + " words"; cnt.className = w > MAX ? "over" : ""; add.disabled = !w || w > MAX; };
             inp.oninput = () => { drafts[it.id] = inp.value; upd(); }; upd();
             f.onsubmit = e => {
@@ -381,7 +395,6 @@
               setNotes(it, [...(it.notes || []), v]);
             };
             f.append(inp, add); meta.append(cnt, links);
-            if (renameBox) box.append(renameBox);
             box.append(ul, f, meta); li.append(box);
             if (focusId === it.id && !editing) { focusId = null; setTimeout(() => inp.focus(), 0); }
           }
