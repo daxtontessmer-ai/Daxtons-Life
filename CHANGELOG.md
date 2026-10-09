@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-09
 
+- **2:25 PM CT — v10: Portfolio pill fixed** (Claude, `testing` branch)
+  "Daxton's Portfolio" now looks exactly like the other pills. Tapping it goes straight to Daxton's Way (daxtontessmer-ai.github.io/DaxtonTessmer/DaxtonWay4721_linktree.html). Removed the slide-over page from v8. Not on `main` yet.
+
 - **2:20 PM CT — v9: Live by** (Claude, `testing` branch)
   Added a "Live by" pill next to School. Tap it to add things to live by, each up to 15 words. Each one is its own pill with nothing underneath it (no second layer). Hold one to edit or delete it. Syncs like the others. Not on `main` yet.
 

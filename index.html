@@ -81,23 +81,7 @@
     .rm { border:0; background:none; color:var(--dim); font:inherit; font-size:12px; cursor:pointer; padding:0; text-decoration:underline; }
     [hidden] { display:none !important; }
     .flat { list-style:none; padding:0; margin-top:10px; display:flex; flex-direction:column; gap:6px; }
-    .pill-go { background:rgba(244,241,234,.9); color:#0b0b0b; border-color:transparent; }
-    .pf-page { position:fixed; inset:0; z-index:20; background:#0b0b0b; display:flex; flex-direction:column;
-               transform:translateX(100%); transition:transform .36s cubic-bezier(.2,.7,.2,1); }
-    .pf-page.in { transform:none; }
-    body.paged .hero, body.paged .rel, body.paged main, body.paged .top { transform:translateX(-22%); opacity:.4; transition:transform .36s cubic-bezier(.2,.7,.2,1), opacity .36s; }
-    .hero, .rel, main, .top { transition:transform .36s cubic-bezier(.2,.7,.2,1), opacity .36s; }
-    .pf-bar { flex:none; display:flex; align-items:center; gap:8px; padding:calc(8px + env(safe-area-inset-top)) 12px 8px;
-              border-bottom:1px solid rgba(244,241,234,.12); background:#0b0b0b; }
-    .pf-back { display:inline-flex; align-items:center; gap:4px; font:inherit; font-size:15px; font-weight:600; color:var(--ink);
-               background:none; border:0; padding:8px 6px; cursor:pointer; }
-    .pf-back svg { width:12px; height:12px; }
-    .pf-title { flex:1; text-align:center; font-size:12px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--dim); }
-    .pf-open { font-size:13px; color:var(--dim); padding:8px 6px; text-decoration:none; }
-    .pf-loading { position:absolute; left:0; right:0; top:50%; text-align:center; color:var(--dim); font-size:14px; }
-    .pf-page.loaded .pf-loading { display:none; }
-    #pfFrame { flex:1; width:100%; border:0; background:#0b0b0b; position:relative; }
-    @media (prefers-reduced-motion:reduce) { .pf-page, body.paged .hero, body.paged .rel, body.paged main, body.paged .top { transition:none; } }
+    a.pill { text-decoration:none; }
     .people .pill, .note.holdable { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action:manipulation; }
     .people .pill.pressing, .note.pressing { transform:scale(.97); background:rgba(244,241,234,.16); transition:transform .45s, background .45s; }
     .editbox { display:flex; flex-direction:column; gap:6px; padding:8px; border:1px solid rgba(244,241,234,.3); border-radius:18px; background:rgba(244,241,234,.06); }
@@ -135,18 +119,6 @@
   <section class="rel" id="rel">
     <div class="pills" id="pills"></div>
     <div id="panels"></div>
-  </section>
-  <section class="pf-page" id="pfPage" hidden aria-label="Daxton's Portfolio">
-    <div class="pf-bar" id="pfBar">
-      <button class="pf-back" id="pfBack" type="button" aria-label="Back to Daxton's Life">
-        <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M7 1L3 5l4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        Back
-      </button>
-      <span class="pf-title">Daxton's Portfolio</span>
-      <a class="pf-open" href="https://daxtontessmer-ai.github.io/DaxtonTessmer/" target="_blank" rel="noopener">Open</a>
-    </div>
-    <div class="pf-loading">Loading portfolio…</div>
-    <iframe id="pfFrame" title="Daxton's Portfolio" loading="lazy"></iframe>
   </section>
   <div class="sheet" id="syncSheet" hidden>
     <div class="sheet-card" role="dialog" aria-labelledby="syncTitle">
@@ -480,35 +452,12 @@
     }
     SECTIONS.forEach(c => all.push(makeSection(c)));
 
-    // ---------- Portfolio: a pill that slides over to your portfolio page inside the app ----------
-    const PORTFOLIO = "https://daxtontessmer-ai.github.io/DaxtonTessmer/";
-    const pf = el("button", "pill pill-go"); pf.type = "button";
+    // ---------- Daxton's Portfolio: looks like the other pills, tapping goes straight to Daxton's Way ----------
+    const pf = el("a", "pill");
+    pf.href = "https://daxtontessmer-ai.github.io/DaxtonTessmer/DaxtonWay4721_linktree.html";
     pf.append(document.createTextNode("Daxton's Portfolio "));
-    pf.insertAdjacentHTML("beforeend", '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>');
+    pf.insertAdjacentHTML("beforeend", CHEV);
     pillsBox.append(pf);
-    const page = $("pfPage"), frame = $("pfFrame");
-    function openPortfolio(push = true) {
-      all.forEach(o => o.close());
-      if (!frame.src) frame.src = PORTFOLIO;         // load only the first time it's opened
-      page.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => page.classList.add("in")));
-      document.body.classList.add("paged");
-      if (push) try { history.pushState({ pf:1 }, "", "#portfolio"); } catch (e) {}
-    }
-    function closePortfolio(pop = false) {
-      page.classList.remove("in"); document.body.classList.remove("paged");
-      setTimeout(() => { if (!page.classList.contains("in")) page.hidden = true; }, 380);
-      if (!pop && location.hash === "#portfolio") try { history.back(); } catch (e) {}
-    }
-    pf.onclick = () => openPortfolio();
-    $("pfBack").onclick = () => closePortfolio();
-    addEventListener("popstate", () => { if (location.hash === "#portfolio") openPortfolio(false); else if (!page.hidden) closePortfolio(true); });
-    frame.addEventListener("load", () => page.classList.add("loaded"));
-    // Swipe right on the top bar to go back
-    (() => { let x0 = null; const bar = $("pfBar");
-      bar.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; }, { passive:true });
-      bar.addEventListener("touchend", e => { if (x0 !== null && e.changedTouches[0].clientX - x0 > 70) closePortfolio(); x0 = null; }, { passive:true });
-    })();
-    if (location.hash === "#portfolio") openPortfolio(false);
     function renderAll() { all.forEach(s => s.render()); }
     renderAll();
     setStatus(token ? "syncing" : "off");
