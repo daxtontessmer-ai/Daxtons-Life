@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Daxton's Life">
 <meta name="theme-color" content="#0b0b0b">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" as="image" href="img/daxton.jpg" fetchpriority="high">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="icon" href="img/icon-192.png">
 <title>Daxton's Life</title>
@@ -19,7 +20,7 @@
   body { font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif; -webkit-font-smoothing:antialiased; overflow:hidden; }
   .hero { position:fixed; inset:0; }
   .hero img { width:100%; height:100%; object-fit:cover; object-position:50% 30%; display:block;
-              animation:settle 2.4s cubic-bezier(.2,.7,.2,1) both; }
+              animation:settle 1s cubic-bezier(.2,.7,.2,1) both; }
   .hero::after { content:""; position:absolute; inset:0;
                  background:linear-gradient(180deg, rgba(11,11,11,.35) 0%, rgba(11,11,11,0) 22%, rgba(11,11,11,0) 45%, rgba(11,11,11,.82) 72%, #0b0b0b 100%); }
   .top { position:fixed; top:0; left:0; right:0; padding:calc(14px + env(safe-area-inset-top)) 20px 0;
@@ -27,14 +28,14 @@
   main { position:fixed; left:0; right:0; bottom:0; z-index:2;
          padding:0 24px calc(36px + env(safe-area-inset-bottom)); max-width:640px; margin:0 auto; }
   .hello { font-size:clamp(17px,4.6vw,22px); font-weight:500; color:var(--dim); margin-bottom:6px;
-           animation:rise .9s .5s cubic-bezier(.2,.7,.2,1) both; }
+           animation:rise .6s .1s cubic-bezier(.2,.7,.2,1) both; }
   h1 { font-size:clamp(34px,10vw,84px); line-height:.92; font-weight:800; letter-spacing:-.035em;
-       animation:rise 1s .75s cubic-bezier(.2,.7,.2,1) both; }
+       animation:rise .6s .2s cubic-bezier(.2,.7,.2,1) both; }
   h1 span { display:block; }
   .line { height:2px; width:56px; background:var(--ink); margin-top:22px; transform-origin:left;
-          animation:grow .8s 1.4s cubic-bezier(.2,.7,.2,1) both; }
+          animation:grow .5s .45s cubic-bezier(.2,.7,.2,1) both; }
   .motto { margin-top:16px; font-size:clamp(16px,4.4vw,21px); font-weight:500; font-style:italic; color:var(--dim);
-           animation:rise .9s 1.7s cubic-bezier(.2,.7,.2,1) both; }
+           animation:rise .6s .55s cubic-bezier(.2,.7,.2,1) both; }
   @keyframes settle { from { transform:scale(1.08); filter:brightness(.6); } to { transform:scale(1); filter:brightness(1); } }
   @keyframes rise { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:none; } }
   @keyframes grow { from { transform:scaleX(0); } to { transform:scaleX(1); } }
@@ -42,11 +43,11 @@
 </style>
 </head>
 <body>
-  <div class="hero"><img src="img/daxton.jpg" alt="Daxton leaning on an ATV, covered in mud"></div>
+  <div class="hero"><img src="img/daxton.jpg" fetchpriority="high" decoding="async" alt="Daxton leaning on an ATV, covered in mud"></div>
   <div class="top"><span>Daxton's Life</span><span id="day"></span></div>
 <style>
     .rel { position:fixed; z-index:3; left:0; right:0; top:calc(44px + env(safe-area-inset-top));
-           padding:0 16px; max-width:640px; margin:0 auto; animation:rise .9s .3s cubic-bezier(.2,.7,.2,1) both; }
+           padding:0 16px; max-width:640px; margin:0 auto; animation:rise .5s 0s cubic-bezier(.2,.7,.2,1) both; }
     .pill { display:inline-flex; align-items:center; gap:8px; font:inherit; font-size:14px; font-weight:600;
             color:var(--ink); background:rgba(20,20,20,.55); border:1px solid rgba(244,241,234,.22);
             border-radius:999px; padding:9px 16px; cursor:pointer; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
@@ -79,6 +80,16 @@
     .meta .over { color:#ff8a7a; }
     .rm { border:0; background:none; color:var(--dim); font:inherit; font-size:12px; cursor:pointer; padding:0; text-decoration:underline; }
     [hidden] { display:none !important; }
+    .note span { cursor:text; }
+    .note.editing { padding:6px; background:rgba(244,241,234,.14); flex-direction:column; align-items:stretch; }
+    .note.editing .row input { padding:7px 12px; font-size:16px; }
+    .note.editing .meta { margin:4px 6px 0; }
+    .ed { flex:none; border:0; background:none; color:var(--dim); font-size:13px; cursor:pointer; padding:2px 4px; }
+    .links { display:flex; gap:14px; }
+    .rename { display:flex; gap:8px; margin:8px 0 4px; }
+    .update { position:fixed; z-index:11; left:50%; transform:translateX(-50%); bottom:calc(16px + env(safe-area-inset-bottom));
+              font:inherit; font-size:13px; font-weight:600; border:0; border-radius:999px; padding:10px 16px;
+              background:var(--ink); color:#0b0b0b; box-shadow:0 6px 24px rgba(0,0,0,.4); cursor:pointer; }
     .empty { font-size:13px; color:var(--dim); padding:10px 4px 2px; }
     .top { align-items:center; gap:10px; }
     .top > span:first-child { flex:1; }
@@ -252,6 +263,7 @@
     const pillsBox = $("pills"), panelsBox = $("panels"), all = [];
     function makeSection(cfg) {
       const open = new Set(), drafts = {}; let focusId = null;
+      let editing = null; // { id, i, text } while changing a note, or { id, rename:true, text } while renaming
       const list_ = () => data.sections[cfg.key];
       const live = () => list_().filter(i => !i.deleted);
 
@@ -303,15 +315,62 @@
           if (isOpen) {
             const box = el("div", "notes"), ul = el("ul");
             (it.notes || []).forEach((t, i) => {
-              const n = el("li", "note"); n.append(el("span", null, t));
-              const x = el("button", "x", "×"); x.setAttribute("aria-label", "Delete");
-              x.onclick = () => setNotes(it, it.notes.filter((_, j) => j !== i));
-              n.append(x); ul.append(n);
+              const n = el("li", "note");
+              if (editing && editing.id === it.id && editing.i === i) {
+                // Changing this note: same 15-word limit as adding one
+                n.classList.add("editing");
+                const f = el("form", "row"), inp = el("input"), save = el("button", "add", "Save");
+                inp.value = editing.text; inp.autocomplete = "off"; save.type = "submit";
+                const meta = el("div", "meta"), cnt = el("span"), links = el("span", "links");
+                const cancel = el("button", "rm", "Cancel"), del = el("button", "rm", "Delete");
+                cancel.type = del.type = "button";
+                const upd = () => { const w = words(inp.value); cnt.textContent = w + " / " + MAX + " words"; cnt.className = w > MAX ? "over" : ""; save.disabled = !w || w > MAX; };
+                inp.oninput = () => { editing.text = inp.value; upd(); }; upd();
+                inp.onkeydown = e => { if (e.key === "Escape") { editing = null; render(); } };
+                cancel.onclick = () => { editing = null; render(); };
+                del.onclick = () => { editing = null; setNotes(it, it.notes.filter((_, j) => j !== i)); };
+                f.onsubmit = e => {
+                  e.preventDefault();
+                  const v = inp.value.trim().replace(/\s+/g, " ");
+                  if (!v || words(v) > MAX) return;
+                  editing = null;
+                  setNotes(it, it.notes.map((x, j) => j === i ? v : x));
+                };
+                f.append(inp, save); links.append(cancel, del); meta.append(cnt, links);
+                n.append(f, meta); ul.append(n);
+                setTimeout(() => { if (document.activeElement !== inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } }, 0);
+                return;
+              }
+              const txt = el("span", null, t); txt.title = "Tap to edit";
+              const ed = el("button", "ed", "Edit"); ed.type = "button"; ed.setAttribute("aria-label", "Edit note");
+              const startEdit = () => { editing = { id: it.id, i, text: t }; render(); };
+              txt.onclick = ed.onclick = startEdit;
+              const x = el("button", "x", "×"); x.setAttribute("aria-label", "Delete note");
+              x.onclick = () => { if (editing && editing.id === it.id) editing = null; setNotes(it, it.notes.filter((_, j) => j !== i)); };
+              n.append(txt, ed, x); ul.append(n);
             });
             const f = el("form", "row"), inp = el("input"), add = el("button", "add", "Add");
             inp.placeholder = cfg.notePh; inp.autocomplete = "off"; inp.value = drafts[it.id] || ""; add.type = "submit";
             const meta = el("div", "meta"), cnt = el("span"), rm = el("button", "rm", cfg.rmLabel);
             rm.type = "button"; rm.onclick = () => remove(it);
+            const rn = el("button", "rm", "Rename"); rn.type = "button";
+            rn.onclick = () => { editing = { id: it.id, rename: true, text: it.name }; render(); };
+            const links = el("span", "links"); links.append(rn, rm);
+            let renameBox = null;
+            if (editing && editing.id === it.id && editing.rename) {
+              renameBox = el("form", "row rename");
+              const ri = el("input"), rs = el("button", "add", "Save"), rc = el("button", "rm", "Cancel");
+              ri.value = editing.text; ri.maxLength = 60; ri.autocomplete = "off"; rs.type = "submit"; rc.type = "button";
+              ri.oninput = () => { editing.text = ri.value; rs.disabled = !ri.value.trim(); };
+              rc.onclick = () => { editing = null; render(); };
+              renameBox.onsubmit = e => {
+                e.preventDefault();
+                const v = ri.value.trim(); if (!v) return;
+                editing = null; it.name = v; it.updated = now(); changed();
+              };
+              renameBox.append(ri, rs, rc);
+              setTimeout(() => { if (document.activeElement !== ri) ri.focus(); }, 0);
+            }
             const upd = () => { const w = words(inp.value); cnt.textContent = w + " / " + MAX + " words"; cnt.className = w > MAX ? "over" : ""; add.disabled = !w || w > MAX; };
             inp.oninput = () => { drafts[it.id] = inp.value; upd(); }; upd();
             f.onsubmit = e => {
@@ -321,9 +380,10 @@
               drafts[it.id] = ""; focusId = it.id;
               setNotes(it, [...(it.notes || []), v]);
             };
-            f.append(inp, add); meta.append(cnt, rm);
+            f.append(inp, add); meta.append(cnt, links);
+            if (renameBox) box.append(renameBox);
             box.append(ul, f, meta); li.append(box);
-            if (focusId === it.id) { focusId = null; setTimeout(() => inp.focus(), 0); }
+            if (focusId === it.id && !editing) { focusId = null; setTimeout(() => inp.focus(), 0); }
           }
           list.append(li);
         }
@@ -346,7 +406,18 @@
 <script>
   document.getElementById("day").textContent =
     new Date().toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+    // A newer version was found in the background: offer a one-tap refresh
+    navigator.serviceWorker.addEventListener("message", e => {
+      if (e.data !== "update-ready" || document.querySelector(".update")) return;
+      const b = document.createElement("button");
+      b.className = "update"; b.textContent = "New version ready · Tap to refresh";
+      b.onclick = () => location.reload();
+      document.body.append(b);
+    });
+    if (navigator.serviceWorker.startMessages) navigator.serviceWorker.startMessages();
+  }
 </script>
 </body>
 </html>
