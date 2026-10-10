@@ -94,7 +94,7 @@
   </section>
   <script>
   (() => {
-    const MAX = 15, LS = "dl-relationships";
+    const LS = "dl-relationships";
     const words = s => s.trim().split(/\s+/).filter(Boolean).length;
     const $ = id => document.getElementById(id);
     let people = [], open = new Set(), drafts = {}, focusId = null;
@@ -160,12 +160,12 @@
           inp.value = drafts[p.id] || ""; add.type = "submit";
           const meta = el("div", "meta"), cnt = el("span"), rm = el("button", "rm", "Remove person");
           rm.type = "button"; rm.onclick = () => removePerson(p).catch(() => alert("Couldn't remove. Try again."));
-          const upd = () => { const w = words(inp.value); cnt.textContent = w + " / " + MAX + " words"; cnt.className = w > MAX ? "over" : ""; add.disabled = !w || w > MAX; };
+          const upd = () => { const w = words(inp.value); cnt.textContent = w + (w === 1 ? " word" : " words"); add.disabled = !w; };
           inp.oninput = () => { drafts[p.id] = inp.value; upd(); }; upd();
           f.onsubmit = e => {
             e.preventDefault();
             const v = inp.value.trim().replace(/\s+/g, " ");
-            if (!v || words(v) > MAX) return;
+            if (!v) return;
             drafts[p.id] = ""; focusId = p.id;
             setNotes(p, [...(p.notes || []), v]).catch(() => { drafts[p.id] = v; alert("Couldn't save. Try again."); render(); });
           };

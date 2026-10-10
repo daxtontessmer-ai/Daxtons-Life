@@ -2,6 +2,11 @@
 
 Every commit gets a summary and timestamp here (Central Time). Newest first.
 
+## 2026-10-10
+
+- **2:45 PM CT — v4: no word limit on notes** (Claude)
+  Removed the 15-word limit on Relationship notes. Notes can be any length; the counter now just shows how many words you've typed.
+
 ## 2026-10-08
 
 - **8:01 PM CT — v3: Relationships** (Claude)

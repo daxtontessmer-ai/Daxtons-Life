@@ -1,5 +1,5 @@
 // Keeps the app working with no signal. Bump VERSION whenever files change.
-const VERSION = "v3";
+const VERSION = "v4";
 const FILES = ["./", "index.html", "manifest.webmanifest", "img/daxton.jpg", "img/icon-180.png", "img/icon-192.png", "img/icon-512.png"];
 
 self.addEventListener("install", e => {
