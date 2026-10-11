@@ -122,6 +122,8 @@
     .roadmap-fill { display:block; width:0; height:100%; border-radius:inherit; background:#9fc7ff; transition:width .25s ease; }
     .roadmap-current { margin-top:10px; color:var(--ink); font-size:12px; line-height:1.4; }
     .roadmap-current strong { display:block; margin-bottom:1px; color:#9fc7ff; font-size:10px; letter-spacing:.1em; text-transform:uppercase; }
+    .roadmap-view { display:flex; justify-content:flex-end; margin-top:7px; }
+    .roadmap-view button { border:0; padding:4px 0; background:none; color:var(--dim); font:inherit; font-size:11px; text-decoration:underline; text-underline-offset:3px; }
     .step-chapter { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:14px 2px 2px 32px;
                     color:#9fc7ff; font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
     .step-chapter:first-child { margin-top:2px; }
@@ -332,7 +334,7 @@
       form.append(input, addBtn);
       const list = el("ul", "people");
       panel.append(form, list);
-      let roadmapSummary = null, roadmapFill = null, roadmapNext = null, roadmapCurrent = null;
+      let roadmapSummary = null, roadmapFill = null, roadmapNext = null, roadmapCurrent = null, roadmapView = null, roadmapHideDone = false;
       // "Flat" pills (Live by): each entry is its own pill, no second layer underneath
       let flatMeta = null;
       if (cfg.flat) {
@@ -349,7 +351,9 @@
         roadmapSummary = el("div", "roadmap-summary"); roadmapNext = el("button", "roadmap-next", "Continue"); roadmapNext.type = "button";
         const track = el("div", "roadmap-track"); roadmapFill = el("span", "roadmap-fill"); track.append(roadmapFill);
         roadmapCurrent = el("div", "roadmap-current");
-        top.append(roadmapSummary, roadmapNext); overview.append(top, track, roadmapCurrent); panel.prepend(overview);
+        roadmapView = el("div", "roadmap-view"); const viewBtn = el("button"); viewBtn.type = "button"; roadmapView.append(viewBtn);
+        viewBtn.onclick = () => { roadmapHideDone = !roadmapHideDone; render(); };
+        top.append(roadmapSummary, roadmapNext); overview.append(top, track, roadmapCurrent, roadmapView); panel.prepend(overview);
         const SEED = [
           ["Vision", "Name who the app is for and the one problem it solves", "Who is this app specifically for, what painful problem do they have, and what outcome will the app create for them?"],
           ["Validate", "Talk to ten of those people about how they handle it today", "What do people do today, what frustrates them, how often does it happen, and what evidence says this problem matters?"],
@@ -426,7 +430,7 @@
         node.addEventListener("click", e => { if (held) { e.preventDefault(); e.stopPropagation(); held = false; return; } if (onTap) onTap(e); });
       }
 
-      function renderFlat(items) {
+      function renderFlat(items, allItems = items) {
         const chapterFor = phase => ({ Vision:"Discover", Validate:"Discover", Value:"Discover", Business:"Discover",
           Scope:"Plan", Experience:"Plan", Prototype:"Plan", Architecture:"Plan",
           Build:"Build", Trust:"Build", Quality:"Build", Beta:"Build",
@@ -436,7 +440,7 @@
           if (cfg.steps) {
             const chapter = chapterFor(it.phase);
             if (chapter !== lastChapter) {
-              const chapterItems = items.filter(entry => chapterFor(entry.phase) === chapter);
+              const chapterItems = allItems.filter(entry => chapterFor(entry.phase) === chapter);
               const heading = el("li", "step-chapter");
               heading.append(el("span", null, chapter), el("span", "step-chapter-count", chapterItems.filter(entry => entry.done).length + "/" + chapterItems.length));
               heading.setAttribute("aria-label", chapter + " chapter progress");
@@ -513,6 +517,9 @@
           const next = items.find(i => !i.done);
           roadmapCurrent.replaceChildren(el("strong", null, next ? "Up next · " + (next.phase || "Custom") : "Roadmap complete"),
             document.createTextNode(next ? next.name : "Review your decisions, evidence, and results before choosing the next investment."));
+          const viewBtn = roadmapView.querySelector("button");
+          viewBtn.textContent = roadmapHideDone ? "Show all stages" : "Hide finished stages";
+          viewBtn.hidden = !completed;
           roadmapNext.textContent = next ? (open.has(next.id) ? "Close step" : "Continue") : "Review roadmap";
           roadmapNext.onclick = () => {
             if (!next) { open.clear(); render(); return; }
@@ -523,7 +530,11 @@
         }
         list.replaceChildren();
         if (!items.length) list.append(el("li", "empty", cfg.empty));
-        if (cfg.flat) { renderFlat(items); return; }
+        if (cfg.flat) {
+          const shown = cfg.steps && roadmapHideDone ? items.filter(it => !it.done) : items;
+          if (items.length && !shown.length) list.append(el("li", "empty", "Every roadmap stage is complete. Show all stages to review your work."));
+          renderFlat(shown, items); return;
+        }
         for (const it of items) {
           const li = el("li", "person"), isOpen = open.has(it.id);
           const b = el("button", "pill"); b.setAttribute("aria-expanded", isOpen);
