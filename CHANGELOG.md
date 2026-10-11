@@ -2,6 +2,11 @@
 
 Every commit gets a summary and timestamp here (Central Time). Newest first.
 
+## 2026-10-10
+
+- **11:29 PM CT — GitHub Pages branch previews** (Codex)
+  Added an automatically refreshed GitHub Pages landing page with clickable live UI previews for `main`, `Beta`, and `testing`. The page rebuilds from the latest branch versions every five minutes.
+
 ## 2026-10-09
 
 - **2:05 AM CT — v5: notes sync everywhere** (Claude)
