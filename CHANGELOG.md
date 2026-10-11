@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-10
 
+- **11:57 PM CT — v19: clear next-stage guidance** (Codex, `testing` branch)
+  The App Roadmap progress card now names the next unfinished phase and its full action, so the Continue button always has clear context. When every stage is finished, the card switches to a completion and review message. Verified that completing and reopening stages updates this guidance immediately. Not on `main` yet.
+
 - **11:52 PM CT — v18: roadmap chapters** (Codex, `testing` branch)
   Grouped the 18-stage App Roadmap into four scannable chapters—Discover, Plan, Build, and Grow—with a completed/total count for each. Custom stages are kept in their own chapter. This makes the full journey easier to understand and navigate on a phone without changing saved answers or progress. Not on `main` yet.
 
