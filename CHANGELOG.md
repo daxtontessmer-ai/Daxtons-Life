@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-10
 
+- **11:47 PM CT — v17: safer roadmap autosave** (Codex, `testing` branch)
+  App Roadmap answers now save automatically after a short pause while typing, rather than waiting for the field to lose focus. The stage shows Saving… and Saved feedback, reducing the chance of losing a decision when the app is closed or another stage is opened. Added accessible labels to every roadmap answer field. Not on `main` yet.
+
 - **11:42 PM CT — v16: guided roadmap progress** (Codex, `testing` branch)
   Added a progress card to App Roadmap showing completion percentage, answered-question count, and finished-stage count. A Continue button opens the next unfinished stage and keeps the active question in view, making the 18-stage timeline easier to work through on a phone. Not on `main` yet.
 
