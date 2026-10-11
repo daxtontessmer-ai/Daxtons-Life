@@ -80,6 +80,13 @@
     .meta .over { color:#ff8a7a; }
     .rm { border:0; background:none; color:var(--dim); font:inherit; font-size:12px; cursor:pointer; padding:0; text-decoration:underline; }
     [hidden] { display:none !important; }
+    .links-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; }
+    .link-pill { display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--ink); background:rgba(244,241,234,.08);
+                 border:1px solid rgba(244,241,234,.18); border-radius:999px; padding:10px 16px; }
+    .link-pill:active { transform:scale(.98); }
+    .lp-text { flex:1; min-width:0; display:flex; flex-direction:column; }
+    .lp-t { font-size:15px; font-weight:600; }
+    .lp-s { font-size:12px; color:var(--dim); }
     .steps { list-style:none; padding:0; margin:12px 0 0; position:relative; display:flex; flex-direction:column; gap:10px; }
     .steps::before { content:""; position:absolute; left:9px; top:14px; bottom:14px; width:2px; border-radius:2px; background:rgba(244,241,234,.22); }
     .step { position:relative; display:flex; align-items:center; gap:10px; padding-left:0; }
@@ -505,6 +512,26 @@
     pf.append(document.createTextNode("Daxton's Portfolio "));
     pf.insertAdjacentHTML("beforeend", CHEV);
     pillsBox.append(pf);
+
+    // ---------- Shot List: dropdown with links to the Shot List app and its Trip Planner ----------
+    (() => {
+      const SL = "https://daxtontessmer-ai.github.io/shot-list/";
+      const btn = el("button", "pill"); btn.type = "button"; btn.setAttribute("aria-expanded", "false");
+      btn.append(document.createTextNode("Shot List ")); btn.insertAdjacentHTML("beforeend", CHEV);
+      const panel = el("div", "panel"); panel.hidden = true;
+      const ul = el("ul", "links-list");
+      [["Shot List", SL, "Every video and shot to film"], ["Trip Planner", SL + "trip.html", "All the questions to plan a trip with friends"]].forEach(([t, href, sub]) => {
+        const li = el("li"), a = el("a", "link-pill"); a.href = href;
+        const txt = el("span", "lp-text"); txt.append(el("span", "lp-t", t), el("span", "lp-s", sub));
+        a.append(txt); a.insertAdjacentHTML("beforeend", '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>');
+        li.append(a); ul.append(li);
+      });
+      panel.append(ul);
+      pillsBox.append(btn); panelsBox.append(panel);
+      const sec = { render(){}, close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } };
+      btn.onclick = () => { const opening = panel.hidden; all.forEach(o => o.close()); if (opening) { panel.hidden = false; btn.setAttribute("aria-expanded", "true"); } };
+      all.push(sec);
+    })();
     function renderAll() { all.forEach(s => s.render()); }
     renderAll();
     setStatus(token ? "syncing" : "off");
