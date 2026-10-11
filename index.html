@@ -460,9 +460,12 @@
             if (open.has(it.id)) {
               const detail = el("div", "step-detail"), q = el("p", "step-question", it.prompt || "What needs to be true before this step is complete?");
               const answer = el("textarea"); answer.placeholder = "Write your decision, evidence, or next action…"; answer.value = it.answer || "";
+              answer.setAttribute("aria-label", (it.phase || "Roadmap") + " answer");
               const actions = el("div", "step-actions"), saved = el("span", "step-saved"), done = el("button", "step-done", it.done ? "Completed ✓" : "Mark complete");
               done.type = "button";
-              const saveAnswer = () => { const v = answer.value.trim(); if (v === (it.answer || "")) return; it.answer = v; it.updated = now(); saveLocal(); queuePush(); saved.textContent = "Saved"; setTimeout(() => saved.textContent = "", 1400); };
+              let saveTimer = null;
+              const saveAnswer = () => { clearTimeout(saveTimer); saveTimer = null; const v = answer.value.trim(); if (v === (it.answer || "")) return; it.answer = v; it.updated = now(); saveLocal(); queuePush(); saved.textContent = "Saved"; setTimeout(() => { if (saved.textContent === "Saved") saved.textContent = ""; }, 1400); };
+              answer.oninput = () => { clearTimeout(saveTimer); saved.textContent = "Saving…"; saveTimer = setTimeout(saveAnswer, 650); };
               answer.onblur = saveAnswer;
               answer.onkeydown = e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { saveAnswer(); answer.blur(); } };
               done.onclick = () => { saveAnswer(); it.done = !it.done; it.updated = now(); changed(); };
