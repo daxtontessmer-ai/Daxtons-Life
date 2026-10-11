@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Daxton's Life">
 <meta name="theme-color" content="#0b0b0b">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" as="image" href="img/daxton.jpg" fetchpriority="high">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="icon" href="img/icon-192.png">
 <title>Daxton's Life</title>
@@ -19,7 +20,7 @@
   body { font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif; -webkit-font-smoothing:antialiased; overflow:hidden; }
   .hero { position:fixed; inset:0; }
   .hero img { width:100%; height:100%; object-fit:cover; object-position:50% 30%; display:block;
-              animation:settle 2.4s cubic-bezier(.2,.7,.2,1) both; }
+              animation:settle 1s cubic-bezier(.2,.7,.2,1) both; }
   .hero::after { content:""; position:absolute; inset:0;
                  background:linear-gradient(180deg, rgba(11,11,11,.35) 0%, rgba(11,11,11,0) 22%, rgba(11,11,11,0) 45%, rgba(11,11,11,.82) 72%, #0b0b0b 100%); }
   .top { position:fixed; top:0; left:0; right:0; padding:calc(14px + env(safe-area-inset-top)) 20px 0;
@@ -27,14 +28,14 @@
   main { position:fixed; left:0; right:0; bottom:0; z-index:2;
          padding:0 24px calc(36px + env(safe-area-inset-bottom)); max-width:640px; margin:0 auto; }
   .hello { font-size:clamp(17px,4.6vw,22px); font-weight:500; color:var(--dim); margin-bottom:6px;
-           animation:rise .9s .5s cubic-bezier(.2,.7,.2,1) both; }
+           animation:rise .6s .1s cubic-bezier(.2,.7,.2,1) both; }
   h1 { font-size:clamp(34px,10vw,84px); line-height:.92; font-weight:800; letter-spacing:-.035em;
-       animation:rise 1s .75s cubic-bezier(.2,.7,.2,1) both; }
+       animation:rise .6s .2s cubic-bezier(.2,.7,.2,1) both; }
   h1 span { display:block; }
   .line { height:2px; width:56px; background:var(--ink); margin-top:22px; transform-origin:left;
-          animation:grow .8s 1.4s cubic-bezier(.2,.7,.2,1) both; }
+          animation:grow .5s .45s cubic-bezier(.2,.7,.2,1) both; }
   .motto { margin-top:16px; font-size:clamp(16px,4.4vw,21px); font-weight:500; font-style:italic; color:var(--dim);
-           animation:rise .9s 1.7s cubic-bezier(.2,.7,.2,1) both; }
+           animation:rise .6s .55s cubic-bezier(.2,.7,.2,1) both; }
   @keyframes settle { from { transform:scale(1.08); filter:brightness(.6); } to { transform:scale(1); filter:brightness(1); } }
   @keyframes rise { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:none; } }
   @keyframes grow { from { transform:scaleX(0); } to { transform:scaleX(1); } }
@@ -42,11 +43,11 @@
 </style>
 </head>
 <body>
-  <div class="hero"><img src="img/daxton.jpg" alt="Daxton leaning on an ATV, covered in mud"></div>
+  <div class="hero"><img src="img/daxton.jpg" fetchpriority="high" decoding="async" alt="Daxton leaning on an ATV, covered in mud"></div>
   <div class="top"><span>Daxton's Life</span><span id="day"></span></div>
 <style>
     .rel { position:fixed; z-index:3; left:0; right:0; top:calc(44px + env(safe-area-inset-top));
-           padding:0 16px; max-width:640px; margin:0 auto; animation:rise .9s .3s cubic-bezier(.2,.7,.2,1) both; }
+           padding:0 16px; max-width:640px; margin:0 auto; animation:rise .5s 0s cubic-bezier(.2,.7,.2,1) both; }
     .pill { display:inline-flex; align-items:center; gap:8px; font:inherit; font-size:14px; font-weight:600;
             color:var(--ink); background:rgba(20,20,20,.55); border:1px solid rgba(244,241,234,.22);
             border-radius:999px; padding:9px 16px; cursor:pointer; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
@@ -79,6 +80,76 @@
     .meta .over { color:#ff8a7a; }
     .rm { border:0; background:none; color:var(--dim); font:inherit; font-size:12px; cursor:pointer; padding:0; text-decoration:underline; }
     [hidden] { display:none !important; }
+    .note .when { flex:none; align-self:center; font-size:12px; color:var(--dim); white-space:nowrap; font-variant-numeric:tabular-nums; }
+    .datebar { display:flex; align-items:center; gap:8px; margin:6px 4px 0; font-size:12px; color:var(--dim); }
+    .datebar input { font:inherit; font-size:14px; color:var(--ink); background:rgba(244,241,234,.08); border:1px solid rgba(244,241,234,.16);
+                     border-radius:999px; padding:5px 12px; color-scheme:dark; min-height:32px; }
+    .links-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; }
+    .link-pill { display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--ink); background:rgba(244,241,234,.08);
+                 border:1px solid rgba(244,241,234,.18); border-radius:999px; padding:10px 16px; }
+    .link-pill:active { transform:scale(.98); }
+    .lp-text { flex:1; min-width:0; display:flex; flex-direction:column; }
+    .lp-t { font-size:15px; font-weight:600; }
+    .lp-s { font-size:12px; color:var(--dim); }
+    .steps { list-style:none; padding:0; margin:12px 0 0; position:relative; display:flex; flex-direction:column; gap:10px; }
+    .steps::before { content:""; position:absolute; left:9px; top:14px; bottom:14px; width:2px; border-radius:2px; background:rgba(244,241,234,.22); }
+    .step { position:relative; display:grid; grid-template-columns:20px minmax(0,1fr); align-items:start; gap:10px; padding-left:0; }
+    .step .dot { flex:none; position:relative; z-index:1; width:20px; height:20px; margin-top:10px; border-radius:50%; background:#161616;
+                 border:2px solid rgba(244,241,234,.45); display:grid; place-items:center; cursor:pointer; }
+    .step.done .dot { background:var(--ink); border-color:var(--ink); }
+    .step.done .dot::after { content:""; width:7px; height:4px; border:2px solid #0b0b0b; border-top:0; border-right:0; transform:translateY(-1px) rotate(-45deg); }
+    .step-main { min-width:0; }
+    .step-pill { width:100%; min-width:0; text-align:left; font:inherit; font-size:14px; line-height:1.35; color:var(--ink);
+                 background:rgba(244,241,234,.1); border:1px solid rgba(244,241,234,.16); border-radius:18px; padding:9px 14px; cursor:pointer;
+                 -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action:manipulation; }
+    .step-pill span { display:block; overflow-wrap:anywhere; }
+    .step-phase { margin-bottom:2px; color:#9fc7ff; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+    .step.done .step-pill { color:var(--dim); background:rgba(244,241,234,.05); }
+    .step-pill.pressing { transform:scale(.97); background:rgba(244,241,234,.16); transition:transform .45s, background .45s; }
+    .step-detail { margin:7px 2px 4px; padding:13px; border:1px solid rgba(244,241,234,.14); border-radius:16px; background:rgba(10,10,10,.45); }
+    .step-question { margin:0 0 9px; color:var(--ink); font-size:13px; line-height:1.45; }
+    .step-detail textarea { width:100%; min-height:92px; resize:vertical; font:inherit; font-size:16px; line-height:1.4; color:var(--ink);
+                            background:rgba(244,241,234,.07); border:1px solid rgba(244,241,234,.2); border-radius:12px; padding:10px 12px; }
+    .step-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:9px; }
+    .step-saved { min-height:1em; color:var(--dim); font-size:11px; }
+    .step-done { border:0; border-radius:999px; padding:7px 11px; background:var(--ink); color:#0b0b0b; font:inherit; font-size:12px; font-weight:700; }
+    .step-action-buttons { display:flex; align-items:center; gap:9px; }
+    .step-edit { border:0; padding:6px 0; background:none; color:var(--dim); font:inherit; font-size:11px; text-decoration:underline; text-underline-offset:3px; }
+    .roadmap-overview { margin-bottom:12px; padding:13px; border:1px solid rgba(244,241,234,.16); border-radius:16px; background:rgba(244,241,234,.06); }
+    .roadmap-overview-top { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .roadmap-summary { font-size:13px; color:var(--dim); line-height:1.35; }
+    .roadmap-summary strong { display:block; color:var(--ink); font-size:15px; }
+    .roadmap-next { flex:none; border:0; border-radius:999px; padding:8px 12px; background:var(--ink); color:#0b0b0b; font:inherit; font-size:12px; font-weight:700; }
+    .roadmap-track { height:6px; margin-top:11px; overflow:hidden; border-radius:99px; background:rgba(244,241,234,.14); }
+    .roadmap-fill { display:block; width:0; height:100%; border-radius:inherit; background:#9fc7ff; transition:width .25s ease; }
+    .roadmap-current { margin-top:10px; color:var(--ink); font-size:12px; line-height:1.4; }
+    .roadmap-current strong { display:block; margin-bottom:1px; color:#9fc7ff; font-size:10px; letter-spacing:.1em; text-transform:uppercase; }
+    .roadmap-view { display:flex; justify-content:flex-end; margin-top:7px; }
+    .roadmap-view button { border:0; padding:4px 0; background:none; color:var(--dim); font:inherit; font-size:11px; text-decoration:underline; text-underline-offset:3px; }
+    .step-chapter { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:14px 2px 2px 32px;
+                    color:#9fc7ff; font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
+    .step-chapter:first-child { margin-top:2px; }
+    .step-chapter-count { color:var(--dim); letter-spacing:.04em; }
+    .step.editing { display:block; }
+    .flat { list-style:none; padding:0; margin-top:10px; display:flex; flex-direction:column; gap:6px; }
+    a.pill { text-decoration:none; }
+    .people .pill, .note.holdable { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action:manipulation; }
+    .people .pill.pressing, .note.pressing { transform:scale(.97); background:rgba(244,241,234,.16); transition:transform .45s, background .45s; }
+    .editbox { display:flex; flex-direction:column; gap:6px; padding:8px; border:1px solid rgba(244,241,234,.3); border-radius:18px; background:rgba(244,241,234,.06); }
+    .rm.danger { color:#ff8a7a; }
+    .hint { font-size:12px; color:rgba(244,241,234,.45); }
+    .note span { cursor:text; }
+    .note.editing { padding:6px; background:rgba(244,241,234,.14); flex-direction:column; align-items:stretch; }
+    .note.editing .row input { padding:7px 12px; font-size:16px; }
+    .stage-prompt-edit { width:100%; min-height:78px; resize:vertical; margin-top:7px; padding:9px 11px; border:1px solid rgba(244,241,234,.2);
+                         border-radius:12px; background:rgba(244,241,234,.07); color:var(--ink); font:inherit; font-size:16px; line-height:1.4; }
+    .note.editing .meta { margin:4px 6px 0; }
+    .ed { flex:none; border:0; background:none; color:var(--dim); font-size:13px; cursor:pointer; padding:2px 4px; }
+    .links { display:flex; gap:14px; }
+    .rename { display:flex; gap:8px; margin:8px 0 4px; }
+    .update { position:fixed; z-index:11; left:50%; transform:translateX(-50%); bottom:calc(16px + env(safe-area-inset-bottom));
+              font:inherit; font-size:13px; font-weight:600; border:0; border-radius:999px; padding:10px 16px;
+              background:var(--ink); color:#0b0b0b; box-shadow:0 6px 24px rgba(0,0,0,.4); cursor:pointer; }
     .empty { font-size:13px; color:var(--dim); padding:10px 4px 2px; }
     .top { align-items:center; gap:10px; }
     .top > span:first-child { flex:1; }
@@ -122,12 +193,15 @@
   (() => {
     // ---------- Sections: each pill works the same way ----------
     const SECTIONS = [
-      { key:"rel",    title:"Relationships", oldLs:"dl-relationships", addPh:"Add a person",           notePh:"A story, desire, or thing to remember", rmLabel:"Remove person", empty:"No one yet. Add your first person above." },
+      { key:"rel",    title:"Relationships", dated:true, oldLs:"dl-relationships", addPh:"Add a person",           notePh:"A story, desire, or thing to remember", rmLabel:"Remove person", empty:"No one yet. Add your first person above." },
       { key:"justdo", title:"Just dos",      oldLs:"dl-justdos",       addPh:"Add something to just do", notePh:"A detail, step, or reminder",         rmLabel:"Remove",        empty:"Nothing yet. Add your first one above." },
       { key:"work",   title:"Work",          oldLs:"dl-work",          addPh:"Add a work item",        notePh:"A task, idea, or thing to remember",    rmLabel:"Remove",        empty:"Nothing yet. Add your first work item above." },
-      { key:"school", title:"School",        oldLs:"dl-school",        addPh:"Add a class or project", notePh:"An assignment, idea, or reminder",     rmLabel:"Remove",        empty:"Nothing yet. Add your first class or project above." }
+      { key:"school", title:"School",        oldLs:"dl-school",        addPh:"Add a class or project", notePh:"An assignment, idea, or reminder",     rmLabel:"Remove",        empty:"Nothing yet. Add your first class or project above." },
+      { key:"liveby", title:"Live by",       oldLs:"dl-liveby",        addPh:"Something to live by",   flat:true,                                                                empty:"Nothing yet. Add your first one above." },
+      { key:"crazy",  title:"Crazy IdEaS",   oldLs:"dl-crazyideas",    addPh:"Add a crazy idea",       flat:true,                                                                empty:"No crazy ideas yet. Add your first one above." },
+      { key:"path",   title:"App Roadmap",   oldLs:"dl-path",          addPh:"Add a step",             flat:true, steps:true,                                                    empty:"No steps yet. Add your first one above." }
     ];
-    const MAX = 15, LS = "dl-data", SYNC = "dl-sync";
+    const MAX = Infinity, LS = "dl-data", SYNC = "dl-sync";
     const REPO = "daxtontessmer-ai/daxtons-life-data", FILE = "data.json";
     const CHEV = '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
     const words = s => s.trim().split(/\s+/).filter(Boolean).length;
@@ -251,7 +325,8 @@
     // ---------- Pills ----------
     const pillsBox = $("pills"), panelsBox = $("panels"), all = [];
     function makeSection(cfg) {
-      const open = new Set(), drafts = {}; let focusId = null;
+      const open = new Set(), drafts = {}; let focusId = null, sec_upd = null;
+      let editing = null; // { id, i, text } while changing a note, or { id, rename:true, text } while renaming
       const list_ = () => data.sections[cfg.key];
       const live = () => list_().filter(i => !i.deleted);
 
@@ -264,6 +339,55 @@
       form.append(input, addBtn);
       const list = el("ul", "people");
       panel.append(form, list);
+      let roadmapSummary = null, roadmapFill = null, roadmapNext = null, roadmapCurrent = null, roadmapView = null, roadmapHideDone = false;
+      // "Flat" pills (Live by): each entry is its own pill, no second layer underneath
+      let flatMeta = null;
+      if (cfg.flat) {
+        list.className = "flat";
+        input.removeAttribute("maxlength");
+        flatMeta = el("div", "meta"); const fc = el("span"); flatMeta.append(fc, el("span", "hint", "Hold to edit or delete"));
+        const upd = () => { const w = words(input.value); fc.textContent = ""; addBtn.disabled = !w || w > MAX; };
+        input.oninput = upd; upd(); sec_upd = upd;
+        form.after(flatMeta);
+      }
+      if (cfg.steps) {
+        list.className = "steps";
+        const overview = el("div", "roadmap-overview"), top = el("div", "roadmap-overview-top");
+        roadmapSummary = el("div", "roadmap-summary"); roadmapNext = el("button", "roadmap-next", "Continue"); roadmapNext.type = "button";
+        const track = el("div", "roadmap-track"); roadmapFill = el("span", "roadmap-fill"); track.append(roadmapFill);
+        roadmapCurrent = el("div", "roadmap-current");
+        roadmapView = el("div", "roadmap-view"); const viewBtn = el("button"); viewBtn.type = "button"; roadmapView.append(viewBtn);
+        viewBtn.onclick = () => { roadmapHideDone = !roadmapHideDone; render(); };
+        top.append(roadmapSummary, roadmapNext); overview.append(top, track, roadmapCurrent, roadmapView); panel.prepend(overview);
+        const SEED = [
+          ["Vision", "Name who the app is for and the one problem it solves", "Who is this app specifically for, what painful problem do they have, and what outcome will the app create for them?"],
+          ["Validate", "Talk to ten of those people about how they handle it today", "What do people do today, what frustrates them, how often does it happen, and what evidence says this problem matters?"],
+          ["Value", "Write the reason someone would switch to this app", "Why is this meaningfully better than their current workaround, and how would a user describe the value in one sentence?"],
+          ["Business", "Choose constraints and a starting business model", "How much time and money can you invest, what must stay private, and will this begin as free, paid, subscription, transaction, or service-supported?"],
+          ["Scope", "Define the smallest useful first version", "What is the one complete job the first version must perform, and which tempting features are explicitly postponed?"],
+          ["Experience", "Map the user's journey from arrival to success", "What does the user see, decide, and do from first open through their first successful result?"],
+          ["Prototype", "Sketch and test the main screens before building", "Can five target users complete the core journey in a clickable or paper prototype without being coached? What confused them?"],
+          ["Architecture", "Choose the technical foundation and data model", "Which client, backend, database, hosting, sync, and offline approach best fit the users, budget, privacy needs, and expected scale?"],
+          ["Build", "Build the smallest version start to finish", "Does the core workflow work end to end with real saved data, useful empty states, loading feedback, and recoverable errors?"],
+          ["Trust", "Add accounts, permissions, privacy, and data safety", "How will each person's data stay isolated, what is collected, who can access it, and how can users export or delete it?"],
+          ["Quality", "Test reliability, speed, accessibility, and recovery", "What happens across phones, slow connections, refreshes, reconnects, concurrent edits, invalid input, and interrupted saves?"],
+          ["Beta", "Launch to a small group and watch real use", "Who are the first five to twenty users, how will they onboard, and where do they get stuck when no one helps them?"],
+          ["Measure", "Track activation, engagement, and retention", "Which event proves a user received value, and what weekly numbers will show acquisition, activation, retention, and failure points?"],
+          ["Acquire", "Find one repeatable way to reach the right users", "Where do target users already gather, what message earns attention, and which channel can bring qualified users at a sustainable cost?"],
+          ["Learn", "Create a continuous feedback and prioritization loop", "How will feedback, support requests, interviews, analytics, and observed behavior become a ranked decision about what to improve next?"],
+          ["Retain", "Build the habit or recurring reason to return", "What continuing value brings users back, what reminder is genuinely helpful, and what causes active users to leave?"],
+          ["Revenue", "Test pricing and payments with real users", "Who pays, for what measurable value, how much, how often, and what small pricing test will reveal willingness to pay?"],
+          ["Scale", "Make monetization sustainable without hurting trust", "Do revenue, support load, infrastructure cost, churn, and acquisition economics improve as usage grows—and what milestone justifies the next investment?"]
+        ];
+        const have = new Set(list_().map(i => i.id));
+        let added = false;
+        SEED.forEach(([phase, name, prompt], i) => {
+          const id = "path-seed-" + (i + 1), existing = list_().find(it => it.id === id);
+          if (!have.has(id)) { list_().push({ id, name, phase, prompt, answer:"", created:i + 1, updated:1, notes:[], done:false }); added = true; }
+          else if (!existing.phase || !existing.prompt) { existing.phase = phase; existing.prompt = prompt; existing.answer = existing.answer || ""; added = true; }
+        });
+        if (added) saveLocal();
+      }
       pillsBox.append(btn); panelsBox.append(panel);
 
       const sec = { render, close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } };
@@ -274,56 +398,235 @@
       };
       form.onsubmit = e => {
         e.preventDefault();
-        const v = input.value.trim(); if (!v) return;
-        input.value = "";
+        const v = input.value.trim().replace(/\s+/g, " "); if (!v) return;
+        if (cfg.flat && words(v) > MAX) return;
+        input.value = ""; if (sec_upd) sec_upd();
         const id = cfg.key + now() + Math.random().toString(36).slice(2, 6);
         list_().push({ id, name: v, created: now(), updated: now(), notes: [] });
         open.add(id); focusId = id; changed();
       };
-      const setNotes = (it, notes) => { it.notes = notes; it.updated = now(); changed(); };
+      const setNotes = (it, notes, dates) => {
+        it.notes = notes;
+        if (cfg.dated) { const d = { ...(it.dates || {}), ...(dates || {}) }; for (const k of Object.keys(d)) if (!notes.includes(k) || !d[k]) delete d[k]; it.dates = d; }
+        it.updated = now(); changed();
+      };
+      const todayISO = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+      const fmtDate = iso => { const [y, m, d] = iso.split("-").map(Number); const dt = new Date(y, m - 1, d);
+        return dt.toLocaleDateString(undefined, { month:"short", day:"numeric", ...(y !== new Date().getFullYear() ? { year:"numeric" } : {}) }); };
+      const dateField = (value, label) => { const w = el("label", "datebar"), i = el("input"); i.type = "date"; i.value = value || ""; i.max = todayISO();
+        w.append(el("span", null, label), i); return [w, i]; };
       const remove = it => {
-        if (!confirm("Remove " + it.name + " and everything saved under it?")) return;
         open.delete(it.id);
         Object.assign(it, { deleted:true, notes:[], updated:now() });
         changed();
       };
+      // Hold ~half a second to edit. A normal tap still does the tap action.
+      function holdable(node, onHold, onTap) {
+        let t = null, x0 = 0, y0 = 0, held = false;
+        const cancel = () => { clearTimeout(t); t = null; node.classList.remove("pressing"); };
+        node.addEventListener("pointerdown", e => {
+          if (e.button) return;
+          held = false; x0 = e.clientX; y0 = e.clientY; node.classList.add("pressing");
+          t = setTimeout(() => { held = true; cancel(); if (navigator.vibrate) navigator.vibrate(15); onHold(); }, 480);
+        });
+        node.addEventListener("pointermove", e => { if (t && Math.hypot(e.clientX - x0, e.clientY - y0) > 10) cancel(); });
+        ["pointerup", "pointercancel", "pointerleave"].forEach(ev => node.addEventListener(ev, cancel));
+        node.addEventListener("contextmenu", e => { e.preventDefault(); if (!held) { cancel(); held = true; onHold(); } });
+        node.addEventListener("click", e => { if (held) { e.preventDefault(); e.stopPropagation(); held = false; return; } if (onTap) onTap(e); });
+      }
+
+      function renderFlat(items, allItems = items) {
+        const chapterFor = phase => ({ Vision:"Discover", Validate:"Discover", Value:"Discover", Business:"Discover",
+          Scope:"Plan", Experience:"Plan", Prototype:"Plan", Architecture:"Plan",
+          Build:"Build", Trust:"Build", Quality:"Build", Beta:"Build",
+          Measure:"Grow", Acquire:"Grow", Learn:"Grow", Retain:"Grow", Revenue:"Grow", Scale:"Grow" })[phase] || "Custom";
+        let lastChapter = null;
+        for (const it of items) {
+          if (cfg.steps) {
+            const chapter = chapterFor(it.phase);
+            if (chapter !== lastChapter) {
+              const chapterItems = allItems.filter(entry => chapterFor(entry.phase) === chapter);
+              const heading = el("li", "step-chapter");
+              heading.append(el("span", null, chapter), el("span", "step-chapter-count", chapterItems.filter(entry => entry.done).length + "/" + chapterItems.length));
+              heading.setAttribute("aria-label", chapter + " chapter progress");
+              list.append(heading); lastChapter = chapter;
+            }
+          }
+          const n = el("li", "note");
+          if (editing && editing.id === it.id) {
+            n.classList.add("editing");
+            const f = el("form", "row"), inp = el("input"), save = el("button", "add", "Save");
+            inp.value = editing.text; inp.autocomplete = "off"; inp.setAttribute("aria-label", cfg.steps ? "Stage title" : "Entry text"); save.type = "submit";
+            const promptEdit = cfg.steps ? el("textarea", "stage-prompt-edit") : null;
+            if (promptEdit) { promptEdit.value = editing.prompt ?? it.prompt ?? ""; promptEdit.placeholder = "Question this stage should answer…"; promptEdit.setAttribute("aria-label", "Stage question"); }
+            const meta = el("div", "meta"), cnt = el("span"), links = el("span", "links");
+            const cancel = el("button", "rm", "Cancel"), del = el("button", "rm", "Delete");
+            cancel.type = del.type = "button";
+            const upd = () => { const w = words(inp.value); cnt.textContent = ""; save.disabled = !w || w > MAX; };
+            inp.oninput = () => { editing.text = inp.value; upd(); }; if (promptEdit) promptEdit.oninput = () => { editing.prompt = promptEdit.value; }; upd();
+            inp.onkeydown = e => { if (e.key === "Escape") { editing = null; render(); } };
+            cancel.onclick = () => { editing = null; render(); };
+            del.onclick = () => { editing = null; remove(it); };
+            f.onsubmit = e => {
+              e.preventDefault();
+              const v = inp.value.trim().replace(/\s+/g, " ");
+              if (!v || words(v) > MAX) return;
+              it.name = v; if (promptEdit) it.prompt = promptEdit.value.trim(); editing = null; it.updated = now(); changed();
+            };
+            f.append(inp, save); links.append(cancel, del); meta.append(cnt, links);
+            n.append(f); if (promptEdit) n.append(promptEdit); n.append(meta); list.append(n);
+            setTimeout(() => { if (document.activeElement !== inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } }, 0);
+            continue;
+          }
+          if (cfg.steps) {
+            n.className = "step" + (it.done ? " done" : "");
+            const dot = el("button", "dot"); dot.type = "button"; dot.setAttribute("aria-label", it.done ? "Mark step incomplete" : "Mark step complete");
+            dot.onclick = () => { it.done = !it.done; it.updated = now(); changed(); };
+            const main = el("div", "step-main");
+            const pill = el("button", "step-pill"); pill.type = "button";
+            pill.setAttribute("aria-expanded", open.has(it.id));
+            if (it.phase) pill.append(el("span", "step-phase", it.phase));
+            pill.append(el("span", null, it.name));
+            holdable(pill, () => { editing = { id: it.id, text: it.name, prompt: it.prompt || "" }; render(); },
+                     () => { open.has(it.id) ? open.delete(it.id) : open.add(it.id); render(); });
+            main.append(pill);
+            if (open.has(it.id)) {
+              const detail = el("div", "step-detail"), q = el("p", "step-question", it.prompt || "What needs to be true before this step is complete?");
+              const answer = el("textarea"); answer.placeholder = "Write your decision, evidence, or next action…"; answer.value = it.answer || "";
+              answer.setAttribute("aria-label", (it.phase || "Roadmap") + " answer");
+              const actions = el("div", "step-actions"), saved = el("span", "step-saved"), actionButtons = el("span", "step-action-buttons");
+              const edit = el("button", "step-edit", "Edit stage"), done = el("button", "step-done", it.done ? "Completed ✓" : "Mark complete");
+              edit.type = done.type = "button";
+              let saveTimer = null;
+              const savedAt = stamp => stamp ? "Saved " + new Date(stamp).toLocaleString(undefined, { month:"short", day:"numeric", hour:"numeric", minute:"2-digit" }) : "";
+              saved.textContent = it.answerUpdated ? savedAt(it.answerUpdated) : (it.answer ? "Saved" : "");
+              const saveAnswer = () => { clearTimeout(saveTimer); saveTimer = null; const v = answer.value.trim(); if (v === (it.answer || "")) return; const stamp = now(); it.answer = v; it.answerUpdated = it.updated = stamp; saveLocal(); queuePush(); saved.textContent = "Saved now"; setTimeout(() => { if (saved.textContent === "Saved now") saved.textContent = savedAt(it.answerUpdated); }, 1400); };
+              answer.oninput = () => { clearTimeout(saveTimer); saved.textContent = "Saving…"; saveTimer = setTimeout(saveAnswer, 650); };
+              answer.onblur = saveAnswer;
+              answer.onkeydown = e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { saveAnswer(); answer.blur(); } };
+              edit.onclick = () => { saveAnswer(); editing = { id: it.id, text: it.name, prompt: it.prompt || "" }; render(); };
+              done.onclick = () => { saveAnswer(); it.done = !it.done; it.updated = now(); changed(); };
+              actionButtons.append(edit, done); actions.append(saved, actionButtons); detail.append(q, answer, actions); main.append(detail);
+            }
+            n.append(dot, main); list.append(n);
+            continue;
+          }
+          n.append(el("span", null, it.name)); n.classList.add("holdable");
+          holdable(n, () => { editing = { id: it.id, text: it.name }; render(); });
+          list.append(n);
+        }
+      }
 
       function render() {
         const items = live().sort((a, b) => (a.created || 0) - (b.created || 0));
-        count.textContent = items.length || "";
+        count.textContent = cfg.steps ? (items.length ? items.filter(i => i.done).length + "/" + items.length : "") : (items.length || "");
+        if (cfg.steps && roadmapSummary) {
+          const completed = items.filter(i => i.done).length, answered = items.filter(i => (i.answer || "").trim()).length;
+          const percent = items.length ? Math.round(completed / items.length * 100) : 0;
+          roadmapSummary.replaceChildren(el("strong", null, percent + "% complete"), document.createTextNode(answered + " answered · " + completed + " finished"));
+          roadmapFill.style.width = percent + "%";
+          const next = items.find(i => !i.done);
+          roadmapCurrent.replaceChildren(el("strong", null, next ? "Up next · " + (next.phase || "Custom") : "Roadmap complete"),
+            document.createTextNode(next ? next.name : "Review your decisions, evidence, and results before choosing the next investment."));
+          const viewBtn = roadmapView.querySelector("button");
+          viewBtn.textContent = roadmapHideDone ? "Show all stages" : "Hide finished stages";
+          viewBtn.hidden = !completed;
+          roadmapNext.textContent = next ? (open.has(next.id) ? "Close step" : "Continue") : "Review roadmap";
+          roadmapNext.onclick = () => {
+            if (!next) { open.clear(); render(); return; }
+            if (open.has(next.id)) open.delete(next.id); else { open.clear(); open.add(next.id); }
+            render();
+            if (open.has(next.id)) setTimeout(() => list.querySelector('.step [aria-expanded="true"]')?.scrollIntoView({ behavior:"smooth", block:"nearest" }), 0);
+          };
+        }
         list.replaceChildren();
         if (!items.length) list.append(el("li", "empty", cfg.empty));
+        if (cfg.flat) {
+          const shown = cfg.steps && roadmapHideDone ? items.filter(it => !it.done) : items;
+          if (items.length && !shown.length) list.append(el("li", "empty", "Every roadmap stage is complete. Show all stages to review your work."));
+          renderFlat(shown, items); return;
+        }
         for (const it of items) {
           const li = el("li", "person"), isOpen = open.has(it.id);
           const b = el("button", "pill"); b.setAttribute("aria-expanded", isOpen);
           b.append(el("span", "nm", it.name), el("span", "n", (it.notes || []).length || ""));
           b.insertAdjacentHTML("beforeend", CHEV);
-          b.onclick = () => { isOpen ? open.delete(it.id) : open.add(it.id); render(); };
+          holdable(b, () => { editing = { id: it.id, rename: true, text: it.name, armed: false }; render(); },
+                      () => { isOpen ? open.delete(it.id) : open.add(it.id); render(); });
+          if (editing && editing.id === it.id && editing.rename) {
+            // Hold menu for a person / item: rename or delete
+            const box = el("div", "editbox");
+            const f = el("form", "row"), ri = el("input"), rs = el("button", "add", "Save");
+            ri.value = editing.text; ri.maxLength = 60; ri.autocomplete = "off"; rs.type = "submit";
+            ri.oninput = () => { editing.text = ri.value; rs.disabled = !ri.value.trim(); };
+            ri.onkeydown = e => { if (e.key === "Escape") { editing = null; render(); } };
+            f.onsubmit = e => { e.preventDefault(); const v = ri.value.trim(); if (!v) return; editing = null; it.name = v; it.updated = now(); changed(); };
+            f.append(ri, rs);
+            const acts = el("div", "meta"), cancel = el("button", "rm", "Cancel");
+            const del = el("button", "rm danger", editing.armed ? "Tap again to delete " + it.name : "Delete");
+            cancel.type = del.type = "button";
+            cancel.onclick = () => { editing = null; render(); };
+            del.onclick = () => { if (!editing.armed) { editing.armed = true; render(); return; } editing = null; remove(it); };
+            acts.append(cancel, del); box.append(f, acts); li.append(box);
+            setTimeout(() => { if (document.activeElement !== ri && !editing?.armed) ri.focus(); }, 0);
+            list.append(li); continue;
+          }
           li.append(b);
           if (isOpen) {
             const box = el("div", "notes"), ul = el("ul");
             (it.notes || []).forEach((t, i) => {
-              const n = el("li", "note"); n.append(el("span", null, t));
-              const x = el("button", "x", "×"); x.setAttribute("aria-label", "Delete");
-              x.onclick = () => setNotes(it, it.notes.filter((_, j) => j !== i));
-              n.append(x); ul.append(n);
+              const n = el("li", "note");
+              if (editing && editing.id === it.id && editing.i === i) {
+                // Changing this note: no word limit
+                n.classList.add("editing");
+                const f = el("form", "row"), inp = el("input"), save = el("button", "add", "Save");
+                inp.value = editing.text; inp.autocomplete = "off"; save.type = "submit";
+                const meta = el("div", "meta"), cnt = el("span"), links = el("span", "links");
+                const cancel = el("button", "rm", "Cancel"), del = el("button", "rm", "Delete");
+                cancel.type = del.type = "button";
+                let editDate = null;
+                if (cfg.dated) { const [w, di] = dateField(editing.date ?? (it.dates || {})[t], "Date"); editDate = di; di.oninput = () => { editing.date = di.value; }; n._dateRow = w; }
+                const upd = () => { const w = words(inp.value); cnt.textContent = ""; save.disabled = !w || w > MAX; };
+                inp.oninput = () => { editing.text = inp.value; upd(); }; upd();
+                inp.onkeydown = e => { if (e.key === "Escape") { editing = null; render(); } };
+                cancel.onclick = () => { editing = null; render(); };
+                del.onclick = () => { editing = null; setNotes(it, it.notes.filter((_, j) => j !== i)); };
+                f.onsubmit = e => {
+                  e.preventDefault();
+                  const v = inp.value.trim().replace(/\s+/g, " ");
+                  if (!v || words(v) > MAX) return;
+                  editing = null;
+                  const nd = {}; if (cfg.dated) { if (v !== t) nd[t] = ""; nd[v] = editDate.value; }
+                  setNotes(it, it.notes.map((x, j) => j === i ? v : x), nd);
+                };
+                f.append(inp, save); links.append(cancel, del); meta.append(cnt, links);
+                n.append(f); if (n._dateRow) n.append(n._dateRow); n.append(meta); ul.append(n);
+                setTimeout(() => { if (document.activeElement !== inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } }, 0);
+                return;
+              }
+              n.append(el("span", null, t)); n.classList.add("holdable");
+              const when = cfg.dated && (it.dates || {})[t];
+              if (when) { const w = el("time", "when", fmtDate(when)); w.dateTime = when; n.append(w); }
+              holdable(n, () => { editing = { id: it.id, i, text: t }; render(); });
+              ul.append(n);
             });
             const f = el("form", "row"), inp = el("input"), add = el("button", "add", "Add");
             inp.placeholder = cfg.notePh; inp.autocomplete = "off"; inp.value = drafts[it.id] || ""; add.type = "submit";
-            const meta = el("div", "meta"), cnt = el("span"), rm = el("button", "rm", cfg.rmLabel);
-            rm.type = "button"; rm.onclick = () => remove(it);
-            const upd = () => { const w = words(inp.value); cnt.textContent = w + " / " + MAX + " words"; cnt.className = w > MAX ? "over" : ""; add.disabled = !w || w > MAX; };
+            const meta = el("div", "meta"), cnt = el("span"), links = el("span", "hint", "Hold to edit or delete");
+            const upd = () => { const w = words(inp.value); cnt.textContent = ""; add.disabled = !w || w > MAX; };
             inp.oninput = () => { drafts[it.id] = inp.value; upd(); }; upd();
+            let addDate = null, addDateRow = null;
+            if (cfg.dated) { [addDateRow, addDate] = dateField(drafts[it.id + ":date"] || todayISO(), "Date"); addDate.oninput = () => { drafts[it.id + ":date"] = addDate.value; }; }
             f.onsubmit = e => {
               e.preventDefault();
               const v = inp.value.trim().replace(/\s+/g, " ");
               if (!v || words(v) > MAX) return;
-              drafts[it.id] = ""; focusId = it.id;
-              setNotes(it, [...(it.notes || []), v]);
+              drafts[it.id] = ""; delete drafts[it.id + ":date"]; focusId = it.id;
+              setNotes(it, [...(it.notes || []), v], cfg.dated ? { [v]: addDate.value } : null);
             };
-            f.append(inp, add); meta.append(cnt, rm);
-            box.append(ul, f, meta); li.append(box);
-            if (focusId === it.id) { focusId = null; setTimeout(() => inp.focus(), 0); }
+            f.append(inp, add); meta.append(cnt, links);
+            box.append(ul, f); if (addDateRow) box.append(addDateRow); box.append(meta); li.append(box);
+            if (focusId === it.id && !editing) { focusId = null; setTimeout(() => inp.focus(), 0); }
           }
           list.append(li);
         }
@@ -331,6 +634,33 @@
       return sec;
     }
     SECTIONS.forEach(c => all.push(makeSection(c)));
+
+    // ---------- Daxton's Portfolio: looks like the other pills, tapping goes straight to Daxton's Way ----------
+    const pf = el("a", "pill");
+    pf.href = "https://daxtontessmer-ai.github.io/DaxtonTessmer/DaxtonWay4721_linktree.html";
+    pf.append(document.createTextNode("Daxton's Portfolio "));
+    pf.insertAdjacentHTML("beforeend", CHEV);
+    pillsBox.append(pf);
+
+    // ---------- Shot List: dropdown with links to the Shot List app and its Trip Planner ----------
+    (() => {
+      const SL = "https://daxtontessmer-ai.github.io/shot-list/";
+      const btn = el("button", "pill"); btn.type = "button"; btn.setAttribute("aria-expanded", "false");
+      btn.append(document.createTextNode("Shot List ")); btn.insertAdjacentHTML("beforeend", CHEV);
+      const panel = el("div", "panel"); panel.hidden = true;
+      const ul = el("ul", "links-list");
+      [["Shot List", SL, "Every video and shot to film"], ["Trip Finder", SL + "trip-finder.html", "Answer together and find your kind of trip"], ["Trip Planner", SL + "trip.html", "All the questions to plan a trip with friends"]].forEach(([t, href, sub]) => {
+        const li = el("li"), a = el("a", "link-pill"); a.href = href;
+        const txt = el("span", "lp-text"); txt.append(el("span", "lp-t", t), el("span", "lp-s", sub));
+        a.append(txt); a.insertAdjacentHTML("beforeend", '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>');
+        li.append(a); ul.append(li);
+      });
+      panel.append(ul);
+      pillsBox.append(btn); panelsBox.append(panel);
+      const sec = { render(){}, close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } };
+      btn.onclick = () => { const opening = panel.hidden; all.forEach(o => o.close()); if (opening) { panel.hidden = false; btn.setAttribute("aria-expanded", "true"); } };
+      all.push(sec);
+    })();
     function renderAll() { all.forEach(s => s.render()); }
     renderAll();
     setStatus(token ? "syncing" : "off");
@@ -346,7 +676,18 @@
 <script>
   document.getElementById("day").textContent =
     new Date().toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+    // A newer version was found in the background: offer a one-tap refresh
+    navigator.serviceWorker.addEventListener("message", e => {
+      if (e.data !== "update-ready" || document.querySelector(".update")) return;
+      const b = document.createElement("button");
+      b.className = "update"; b.textContent = "New version ready · Tap to refresh";
+      b.onclick = () => location.reload();
+      document.body.append(b);
+    });
+    if (navigator.serviceWorker.startMessages) navigator.serviceWorker.startMessages();
+  }
 </script>
 </body>
 </html>
