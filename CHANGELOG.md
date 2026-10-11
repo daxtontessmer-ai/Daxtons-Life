@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-10
 
+- **11:40 PM CT — v14: dated Relationship notes, no word limit** (Claude, `testing` branch)
+  Notes about a person in Relationships now have a date. The date picker under the note box starts on today, and you can change it. The date shows on the right of each note. Hold a note to change its date, or add one to older notes. Also removed the 15-word limit everywhere: any section, any entry, as long as you want. Not on `main` yet.
+
 - **11:20 PM CT — v13: Trip Finder link** (Claude, `testing` branch)
   The Shot List pill now has a third link: Trip Finder, a new page on the shot-list site. It asks one question at a time across 12 sections, opens follow-up questions based on your answers, and lands on one of 7 trip types with what you'll get out of it and what to expect. Not on `main` yet.
 

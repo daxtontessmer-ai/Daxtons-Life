@@ -80,6 +80,10 @@
     .meta .over { color:#ff8a7a; }
     .rm { border:0; background:none; color:var(--dim); font:inherit; font-size:12px; cursor:pointer; padding:0; text-decoration:underline; }
     [hidden] { display:none !important; }
+    .note .when { flex:none; align-self:center; font-size:12px; color:var(--dim); white-space:nowrap; font-variant-numeric:tabular-nums; }
+    .datebar { display:flex; align-items:center; gap:8px; margin:6px 4px 0; font-size:12px; color:var(--dim); }
+    .datebar input { font:inherit; font-size:14px; color:var(--ink); background:rgba(244,241,234,.08); border:1px solid rgba(244,241,234,.16);
+                     border-radius:999px; padding:5px 12px; color-scheme:dark; min-height:32px; }
     .links-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; }
     .link-pill { display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--ink); background:rgba(244,241,234,.08);
                  border:1px solid rgba(244,241,234,.18); border-radius:999px; padding:10px 16px; }
@@ -161,14 +165,14 @@
   (() => {
     // ---------- Sections: each pill works the same way ----------
     const SECTIONS = [
-      { key:"rel",    title:"Relationships", oldLs:"dl-relationships", addPh:"Add a person",           notePh:"A story, desire, or thing to remember", rmLabel:"Remove person", empty:"No one yet. Add your first person above." },
+      { key:"rel",    title:"Relationships", dated:true, oldLs:"dl-relationships", addPh:"Add a person",           notePh:"A story, desire, or thing to remember", rmLabel:"Remove person", empty:"No one yet. Add your first person above." },
       { key:"justdo", title:"Just dos",      oldLs:"dl-justdos",       addPh:"Add something to just do", notePh:"A detail, step, or reminder",         rmLabel:"Remove",        empty:"Nothing yet. Add your first one above." },
       { key:"work",   title:"Work",          oldLs:"dl-work",          addPh:"Add a work item",        notePh:"A task, idea, or thing to remember",    rmLabel:"Remove",        empty:"Nothing yet. Add your first work item above." },
       { key:"school", title:"School",        oldLs:"dl-school",        addPh:"Add a class or project", notePh:"An assignment, idea, or reminder",     rmLabel:"Remove",        empty:"Nothing yet. Add your first class or project above." },
       { key:"liveby", title:"Live by",       oldLs:"dl-liveby",        addPh:"Something to live by",   flat:true,                                                                empty:"Nothing yet. Add your first one above." },
       { key:"path",   title:"App Roadmap",   oldLs:"dl-path",          addPh:"Add a step",             flat:true, steps:true,                                                    empty:"No steps yet. Add your first one above." }
     ];
-    const MAX = 15, LS = "dl-data", SYNC = "dl-sync";
+    const MAX = Infinity, LS = "dl-data", SYNC = "dl-sync";
     const REPO = "daxtontessmer-ai/daxtons-life-data", FILE = "data.json";
     const CHEV = '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
     const words = s => s.trim().split(/\s+/).filter(Boolean).length;
@@ -306,13 +310,13 @@
       form.append(input, addBtn);
       const list = el("ul", "people");
       panel.append(form, list);
-      // "Flat" pills (Live by): each entry is its own 15-word pill, no second layer underneath
+      // "Flat" pills (Live by): each entry is its own pill, no second layer underneath
       let flatMeta = null;
       if (cfg.flat) {
         list.className = "flat";
         input.removeAttribute("maxlength");
         flatMeta = el("div", "meta"); const fc = el("span"); flatMeta.append(fc, el("span", "hint", "Hold to edit or delete"));
-        const upd = () => { const w = words(input.value); fc.textContent = w + " / " + MAX + " words"; fc.className = w > MAX ? "over" : ""; addBtn.disabled = !w || w > MAX; };
+        const upd = () => { const w = words(input.value); fc.textContent = ""; addBtn.disabled = !w || w > MAX; };
         input.oninput = upd; upd(); sec_upd = upd;
         form.after(flatMeta);
       }
@@ -354,7 +358,16 @@
         list_().push({ id, name: v, created: now(), updated: now(), notes: [] });
         open.add(id); focusId = id; changed();
       };
-      const setNotes = (it, notes) => { it.notes = notes; it.updated = now(); changed(); };
+      const setNotes = (it, notes, dates) => {
+        it.notes = notes;
+        if (cfg.dated) { const d = { ...(it.dates || {}), ...(dates || {}) }; for (const k of Object.keys(d)) if (!notes.includes(k) || !d[k]) delete d[k]; it.dates = d; }
+        it.updated = now(); changed();
+      };
+      const todayISO = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+      const fmtDate = iso => { const [y, m, d] = iso.split("-").map(Number); const dt = new Date(y, m - 1, d);
+        return dt.toLocaleDateString(undefined, { month:"short", day:"numeric", ...(y !== new Date().getFullYear() ? { year:"numeric" } : {}) }); };
+      const dateField = (value, label) => { const w = el("label", "datebar"), i = el("input"); i.type = "date"; i.value = value || ""; i.max = todayISO();
+        w.append(el("span", null, label), i); return [w, i]; };
       const remove = it => {
         open.delete(it.id);
         Object.assign(it, { deleted:true, notes:[], updated:now() });
@@ -385,7 +398,7 @@
             const meta = el("div", "meta"), cnt = el("span"), links = el("span", "links");
             const cancel = el("button", "rm", "Cancel"), del = el("button", "rm", "Delete");
             cancel.type = del.type = "button";
-            const upd = () => { const w = words(inp.value); cnt.textContent = w + " / " + MAX + " words"; cnt.className = w > MAX ? "over" : ""; save.disabled = !w || w > MAX; };
+            const upd = () => { const w = words(inp.value); cnt.textContent = ""; save.disabled = !w || w > MAX; };
             inp.oninput = () => { editing.text = inp.value; upd(); }; upd();
             inp.onkeydown = e => { if (e.key === "Escape") { editing = null; render(); } };
             cancel.onclick = () => { editing = null; render(); };
@@ -455,14 +468,16 @@
             (it.notes || []).forEach((t, i) => {
               const n = el("li", "note");
               if (editing && editing.id === it.id && editing.i === i) {
-                // Changing this note: same 15-word limit as adding one
+                // Changing this note: no word limit
                 n.classList.add("editing");
                 const f = el("form", "row"), inp = el("input"), save = el("button", "add", "Save");
                 inp.value = editing.text; inp.autocomplete = "off"; save.type = "submit";
                 const meta = el("div", "meta"), cnt = el("span"), links = el("span", "links");
                 const cancel = el("button", "rm", "Cancel"), del = el("button", "rm", "Delete");
                 cancel.type = del.type = "button";
-                const upd = () => { const w = words(inp.value); cnt.textContent = w + " / " + MAX + " words"; cnt.className = w > MAX ? "over" : ""; save.disabled = !w || w > MAX; };
+                let editDate = null;
+                if (cfg.dated) { const [w, di] = dateField(editing.date ?? (it.dates || {})[t], "Date"); editDate = di; di.oninput = () => { editing.date = di.value; }; n._dateRow = w; }
+                const upd = () => { const w = words(inp.value); cnt.textContent = ""; save.disabled = !w || w > MAX; };
                 inp.oninput = () => { editing.text = inp.value; upd(); }; upd();
                 inp.onkeydown = e => { if (e.key === "Escape") { editing = null; render(); } };
                 cancel.onclick = () => { editing = null; render(); };
@@ -472,31 +487,36 @@
                   const v = inp.value.trim().replace(/\s+/g, " ");
                   if (!v || words(v) > MAX) return;
                   editing = null;
-                  setNotes(it, it.notes.map((x, j) => j === i ? v : x));
+                  const nd = {}; if (cfg.dated) { if (v !== t) nd[t] = ""; nd[v] = editDate.value; }
+                  setNotes(it, it.notes.map((x, j) => j === i ? v : x), nd);
                 };
                 f.append(inp, save); links.append(cancel, del); meta.append(cnt, links);
-                n.append(f, meta); ul.append(n);
+                n.append(f); if (n._dateRow) n.append(n._dateRow); n.append(meta); ul.append(n);
                 setTimeout(() => { if (document.activeElement !== inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } }, 0);
                 return;
               }
               n.append(el("span", null, t)); n.classList.add("holdable");
+              const when = cfg.dated && (it.dates || {})[t];
+              if (when) { const w = el("time", "when", fmtDate(when)); w.dateTime = when; n.append(w); }
               holdable(n, () => { editing = { id: it.id, i, text: t }; render(); });
               ul.append(n);
             });
             const f = el("form", "row"), inp = el("input"), add = el("button", "add", "Add");
             inp.placeholder = cfg.notePh; inp.autocomplete = "off"; inp.value = drafts[it.id] || ""; add.type = "submit";
             const meta = el("div", "meta"), cnt = el("span"), links = el("span", "hint", "Hold to edit or delete");
-            const upd = () => { const w = words(inp.value); cnt.textContent = w + " / " + MAX + " words"; cnt.className = w > MAX ? "over" : ""; add.disabled = !w || w > MAX; };
+            const upd = () => { const w = words(inp.value); cnt.textContent = ""; add.disabled = !w || w > MAX; };
             inp.oninput = () => { drafts[it.id] = inp.value; upd(); }; upd();
+            let addDate = null, addDateRow = null;
+            if (cfg.dated) { [addDateRow, addDate] = dateField(drafts[it.id + ":date"] || todayISO(), "Date"); addDate.oninput = () => { drafts[it.id + ":date"] = addDate.value; }; }
             f.onsubmit = e => {
               e.preventDefault();
               const v = inp.value.trim().replace(/\s+/g, " ");
               if (!v || words(v) > MAX) return;
-              drafts[it.id] = ""; focusId = it.id;
-              setNotes(it, [...(it.notes || []), v]);
+              drafts[it.id] = ""; delete drafts[it.id + ":date"]; focusId = it.id;
+              setNotes(it, [...(it.notes || []), v], cfg.dated ? { [v]: addDate.value } : null);
             };
             f.append(inp, add); meta.append(cnt, links);
-            box.append(ul, f, meta); li.append(box);
+            box.append(ul, f); if (addDateRow) box.append(addDateRow); box.append(meta); li.append(box);
             if (focusId === it.id && !editing) { focusId = null; setTimeout(() => inp.focus(), 0); }
           }
           list.append(li);
