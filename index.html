@@ -113,6 +113,13 @@
     .step-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:9px; }
     .step-saved { min-height:1em; color:var(--dim); font-size:11px; }
     .step-done { border:0; border-radius:999px; padding:7px 11px; background:var(--ink); color:#0b0b0b; font:inherit; font-size:12px; font-weight:700; }
+    .roadmap-overview { margin-bottom:12px; padding:13px; border:1px solid rgba(244,241,234,.16); border-radius:16px; background:rgba(244,241,234,.06); }
+    .roadmap-overview-top { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .roadmap-summary { font-size:13px; color:var(--dim); line-height:1.35; }
+    .roadmap-summary strong { display:block; color:var(--ink); font-size:15px; }
+    .roadmap-next { flex:none; border:0; border-radius:999px; padding:8px 12px; background:var(--ink); color:#0b0b0b; font:inherit; font-size:12px; font-weight:700; }
+    .roadmap-track { height:6px; margin-top:11px; overflow:hidden; border-radius:99px; background:rgba(244,241,234,.14); }
+    .roadmap-fill { display:block; width:0; height:100%; border-radius:inherit; background:#9fc7ff; transition:width .25s ease; }
     .step.editing { display:block; }
     .flat { list-style:none; padding:0; margin-top:10px; display:flex; flex-direction:column; gap:6px; }
     a.pill { text-decoration:none; }
@@ -319,6 +326,7 @@
       form.append(input, addBtn);
       const list = el("ul", "people");
       panel.append(form, list);
+      let roadmapSummary = null, roadmapFill = null, roadmapNext = null;
       // "Flat" pills (Live by): each entry is its own pill, no second layer underneath
       let flatMeta = null;
       if (cfg.flat) {
@@ -331,6 +339,10 @@
       }
       if (cfg.steps) {
         list.className = "steps";
+        const overview = el("div", "roadmap-overview"), top = el("div", "roadmap-overview-top");
+        roadmapSummary = el("div", "roadmap-summary"); roadmapNext = el("button", "roadmap-next", "Continue"); roadmapNext.type = "button";
+        const track = el("div", "roadmap-track"); roadmapFill = el("span", "roadmap-fill"); track.append(roadmapFill);
+        top.append(roadmapSummary, roadmapNext); overview.append(top, track); panel.prepend(overview);
         const SEED = [
           ["Vision", "Name who the app is for and the one problem it solves", "Who is this app specifically for, what painful problem do they have, and what outcome will the app create for them?"],
           ["Validate", "Talk to ten of those people about how they handle it today", "What do people do today, what frustrates them, how often does it happen, and what evidence says this problem matters?"],
@@ -468,6 +480,20 @@
       function render() {
         const items = live().sort((a, b) => (a.created || 0) - (b.created || 0));
         count.textContent = cfg.steps ? (items.length ? items.filter(i => i.done).length + "/" + items.length : "") : (items.length || "");
+        if (cfg.steps && roadmapSummary) {
+          const completed = items.filter(i => i.done).length, answered = items.filter(i => (i.answer || "").trim()).length;
+          const percent = items.length ? Math.round(completed / items.length * 100) : 0;
+          roadmapSummary.replaceChildren(el("strong", null, percent + "% complete"), document.createTextNode(answered + " answered · " + completed + " finished"));
+          roadmapFill.style.width = percent + "%";
+          const next = items.find(i => !i.done);
+          roadmapNext.textContent = next ? (open.has(next.id) ? "Close step" : "Continue") : "Review roadmap";
+          roadmapNext.onclick = () => {
+            if (!next) { open.clear(); render(); return; }
+            if (open.has(next.id)) open.delete(next.id); else { open.clear(); open.add(next.id); }
+            render();
+            if (open.has(next.id)) setTimeout(() => list.querySelector('.step [aria-expanded="true"]')?.scrollIntoView({ behavior:"smooth", block:"nearest" }), 0);
+          };
+        }
         list.replaceChildren();
         if (!items.length) list.append(el("li", "empty", cfg.empty));
         if (cfg.flat) { renderFlat(items); return; }
