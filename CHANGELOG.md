@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-11
 
+- **12:17 AM CT — v23: visible answer save times** (Codex, `testing` branch)
+  Roadmap answers now show when they were last saved, including a Saved now confirmation followed by a compact date and time that remains visible after reopening the stage. The answer-specific timestamp travels with the existing synced roadmap data, making cross-device edits easier to trust. Not on `main` yet.
+
 - **12:12 AM CT — v22: editable roadmap questions** (Codex, `testing` branch)
   Edit stage now opens both the stage title and its guiding question. Users can tailor the roadmap prompts to a specific app, save those changes through the existing sync system, or cancel without changing anything. Both editing fields have accessible labels and phone-sized text controls. Not on `main` yet.
 
