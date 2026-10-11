@@ -120,6 +120,8 @@
     .roadmap-next { flex:none; border:0; border-radius:999px; padding:8px 12px; background:var(--ink); color:#0b0b0b; font:inherit; font-size:12px; font-weight:700; }
     .roadmap-track { height:6px; margin-top:11px; overflow:hidden; border-radius:99px; background:rgba(244,241,234,.14); }
     .roadmap-fill { display:block; width:0; height:100%; border-radius:inherit; background:#9fc7ff; transition:width .25s ease; }
+    .roadmap-current { margin-top:10px; color:var(--ink); font-size:12px; line-height:1.4; }
+    .roadmap-current strong { display:block; margin-bottom:1px; color:#9fc7ff; font-size:10px; letter-spacing:.1em; text-transform:uppercase; }
     .step-chapter { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:14px 2px 2px 32px;
                     color:#9fc7ff; font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
     .step-chapter:first-child { margin-top:2px; }
@@ -330,7 +332,7 @@
       form.append(input, addBtn);
       const list = el("ul", "people");
       panel.append(form, list);
-      let roadmapSummary = null, roadmapFill = null, roadmapNext = null;
+      let roadmapSummary = null, roadmapFill = null, roadmapNext = null, roadmapCurrent = null;
       // "Flat" pills (Live by): each entry is its own pill, no second layer underneath
       let flatMeta = null;
       if (cfg.flat) {
@@ -346,7 +348,8 @@
         const overview = el("div", "roadmap-overview"), top = el("div", "roadmap-overview-top");
         roadmapSummary = el("div", "roadmap-summary"); roadmapNext = el("button", "roadmap-next", "Continue"); roadmapNext.type = "button";
         const track = el("div", "roadmap-track"); roadmapFill = el("span", "roadmap-fill"); track.append(roadmapFill);
-        top.append(roadmapSummary, roadmapNext); overview.append(top, track); panel.prepend(overview);
+        roadmapCurrent = el("div", "roadmap-current");
+        top.append(roadmapSummary, roadmapNext); overview.append(top, track, roadmapCurrent); panel.prepend(overview);
         const SEED = [
           ["Vision", "Name who the app is for and the one problem it solves", "Who is this app specifically for, what painful problem do they have, and what outcome will the app create for them?"],
           ["Validate", "Talk to ten of those people about how they handle it today", "What do people do today, what frustrates them, how often does it happen, and what evidence says this problem matters?"],
@@ -508,6 +511,8 @@
           roadmapSummary.replaceChildren(el("strong", null, percent + "% complete"), document.createTextNode(answered + " answered · " + completed + " finished"));
           roadmapFill.style.width = percent + "%";
           const next = items.find(i => !i.done);
+          roadmapCurrent.replaceChildren(el("strong", null, next ? "Up next · " + (next.phase || "Custom") : "Roadmap complete"),
+            document.createTextNode(next ? next.name : "Review your decisions, evidence, and results before choosing the next investment."));
           roadmapNext.textContent = next ? (open.has(next.id) ? "Close step" : "Continue") : "Review roadmap";
           roadmapNext.onclick = () => {
             if (!next) { open.clear(); render(); return; }
