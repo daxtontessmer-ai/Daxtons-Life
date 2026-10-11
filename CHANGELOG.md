@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-11
 
+- **1:08 AM CT — v25: Links section** (Claude, `testing` branch)
+  The home screen now has two parts. Your own pills (Relationships, Just dos, Work, School, Live by, Crazy IdEaS, App Roadmap) sit on top. Below a thin line, a "Links" section holds Daxton's Portfolio and Shot List. Not on `main` yet.
+
 - **12:45 AM CT — v14 moved to `main`** (Claude)
   Everything from `testing` (v6 to v14) is now on `main`: hold to edit or delete, Live by, Daxton's Portfolio, App Roadmap, Shot List links, dated Relationship notes, and no word limit. Your notes were already shared between versions through `daxtons-life-data`, so nothing needed moving.
 

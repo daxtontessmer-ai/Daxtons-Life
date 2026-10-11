@@ -52,6 +52,8 @@
             color:var(--ink); background:rgba(20,20,20,.55); border:1px solid rgba(244,241,234,.22);
             border-radius:999px; padding:9px 16px; cursor:pointer; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
     .pills { display:flex; flex-wrap:wrap; gap:8px; }
+    .links-sec { margin-top:14px; padding-top:12px; border-top:1px solid rgba(244,241,234,.22); }
+    .sec-label { font-size:11px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--dim); margin:0 0 8px 2px; }
     .pill:active { transform:scale(.98); }
     .pill .n { font-size:12px; color:var(--dim); font-weight:500; }
     .chev { width:10px; height:10px; transition:transform .2s; }
@@ -172,6 +174,11 @@
   <section class="rel" id="rel">
     <div class="pills" id="pills"></div>
     <div id="panels"></div>
+    <div class="links-sec" id="linksSec">
+      <div class="sec-label">Links</div>
+      <div class="pills" id="linkPills"></div>
+      <div id="linkPanels"></div>
+    </div>
   </section>
   <div class="sheet" id="syncSheet" hidden>
     <div class="sheet-card" role="dialog" aria-labelledby="syncTitle">
@@ -323,7 +330,7 @@
     };
 
     // ---------- Pills ----------
-    const pillsBox = $("pills"), panelsBox = $("panels"), all = [];
+    const pillsBox = $("pills"), panelsBox = $("panels"), linkPills = $("linkPills"), linkPanels = $("linkPanels"), all = [];
     function makeSection(cfg) {
       const open = new Set(), drafts = {}; let focusId = null, sec_upd = null;
       let editing = null; // { id, i, text } while changing a note, or { id, rename:true, text } while renaming
@@ -640,7 +647,7 @@
     pf.href = "https://daxtontessmer-ai.github.io/DaxtonTessmer/DaxtonWay4721_linktree.html";
     pf.append(document.createTextNode("Daxton's Portfolio "));
     pf.insertAdjacentHTML("beforeend", CHEV);
-    pillsBox.append(pf);
+    linkPills.append(pf);
 
     // ---------- Shot List: dropdown with links to the Shot List app and its Trip Planner ----------
     (() => {
@@ -656,7 +663,7 @@
         li.append(a); ul.append(li);
       });
       panel.append(ul);
-      pillsBox.append(btn); panelsBox.append(panel);
+      linkPills.append(btn); linkPanels.append(panel);
       const sec = { render(){}, close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } };
       btn.onclick = () => { const opening = panel.hidden; all.forEach(o => o.close()); if (opening) { panel.hidden = false; btn.setAttribute("aria-expanded", "true"); } };
       all.push(sec);
