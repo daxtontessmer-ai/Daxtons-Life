@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-11
 
+- **12:25 AM CT — v24: Crazy IdEaS pill** (Codex, `testing` branch)
+  Added a new Crazy IdEaS pill formatted and behaved like Live by: ideas appear as individual flat pills, can be added without a word limit, and can be held to edit or delete. Crazy IdEaS uses its own synced data section, preserving the existing pills and privacy behavior. Not on `main` yet.
+
 - **12:17 AM CT — v23: visible answer save times** (Codex, `testing` branch)
   Roadmap answers now show when they were last saved, including a Saved now confirmation followed by a compact date and time that remains visible after reopening the stage. The answer-specific timestamp travels with the existing synced roadmap data, making cross-device edits easier to trust. Not on `main` yet.
 
