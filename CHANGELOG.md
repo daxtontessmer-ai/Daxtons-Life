@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-10
 
+- **11:20 PM CT — v13: Trip Finder link** (Claude, `testing` branch)
+  The Shot List pill now has a third link: Trip Finder, a new page on the shot-list site. It asks one question at a time across 12 sections, opens follow-up questions based on your answers, and lands on one of 7 trip types with what you'll get out of it and what to expect. Not on `main` yet.
+
 - **10:55 PM CT — v12: Shot List pill** (Claude, `testing` branch)
   New "Shot List" pill. Its dropdown has two links: your Shot List app, and the new Trip Planner page (added to the shot-list site at /trip.html) with 40 questions in 13 sections to plan a trip with friends. Not on `main` yet.
 
