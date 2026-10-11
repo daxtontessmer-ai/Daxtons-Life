@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-10
 
+- **11:42 PM CT — v16: guided roadmap progress** (Codex, `testing` branch)
+  Added a progress card to App Roadmap showing completion percentage, answered-question count, and finished-stage count. A Continue button opens the next unfinished stage and keeps the active question in view, making the 18-stage timeline easier to work through on a phone. Not on `main` yet.
+
 - **11:34 PM CT — v15: interactive app-building timeline** (Codex, `testing` branch)
   Expanded App Roadmap from 12 check-off pills into an 18-stage timeline from problem definition through sustainable monetization. Each stage now opens to a focused question, saves a written decision or evidence, and has a separate completion control. Answers, edits, and progress use the existing local and cross-device sync data. Not on `main` yet.
 
