@@ -497,7 +497,9 @@
               const edit = el("button", "step-edit", "Edit stage"), done = el("button", "step-done", it.done ? "Completed ✓" : "Mark complete");
               edit.type = done.type = "button";
               let saveTimer = null;
-              const saveAnswer = () => { clearTimeout(saveTimer); saveTimer = null; const v = answer.value.trim(); if (v === (it.answer || "")) return; it.answer = v; it.updated = now(); saveLocal(); queuePush(); saved.textContent = "Saved"; setTimeout(() => { if (saved.textContent === "Saved") saved.textContent = ""; }, 1400); };
+              const savedAt = stamp => stamp ? "Saved " + new Date(stamp).toLocaleString(undefined, { month:"short", day:"numeric", hour:"numeric", minute:"2-digit" }) : "";
+              saved.textContent = it.answerUpdated ? savedAt(it.answerUpdated) : (it.answer ? "Saved" : "");
+              const saveAnswer = () => { clearTimeout(saveTimer); saveTimer = null; const v = answer.value.trim(); if (v === (it.answer || "")) return; const stamp = now(); it.answer = v; it.answerUpdated = it.updated = stamp; saveLocal(); queuePush(); saved.textContent = "Saved now"; setTimeout(() => { if (saved.textContent === "Saved now") saved.textContent = savedAt(it.answerUpdated); }, 1400); };
               answer.oninput = () => { clearTimeout(saveTimer); saved.textContent = "Saving…"; saveTimer = setTimeout(saveAnswer, 650); };
               answer.onblur = saveAnswer;
               answer.onkeydown = e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { saveAnswer(); answer.blur(); } };
