@@ -1,53 +1,19 @@
 # Changelog
 
-Every commit gets a summary and timestamp here (Central Time). Newest first.
+This file tracks daily conversation summaries and every commit made through this Codex conversation. Each future commit must update this file with a short summary and a Central Time timestamp.
 
-## 2026-10-10
+## 2026-10-07
 
-- **11:40 PM CT — v14: dated Relationship notes, no word limit** (Claude, `testing` branch)
-  Notes about a person in Relationships now have a date. The date picker under the note box starts on today, and you can change it. The date shows on the right of each note. Hold a note to change its date, or add one to older notes. Also removed the 15-word limit everywhere: any section, any entry, as long as you want. Not on `main` yet.
+### Conversation summary
 
-- **11:20 PM CT — v13: Trip Finder link** (Claude, `testing` branch)
-  The Shot List pill now has a third link: Trip Finder, a new page on the shot-list site. It asks one question at a time across 12 sections, opens follow-up questions based on your answers, and lands on one of 7 trip types with what you'll get out of it and what to expect. Not on `main` yet.
+- Created the private GitHub repository `SemesterDocs`.
+- Added a protective `.gitignore` covering secrets, API keys, credentials, generated files, archives, large media, datasets, and model artifacts.
+- Created the `feature1` branch from `main`.
+- Added `test-document.md` to verify the branch workflow.
+- Established the requirement that every future commit include a timestamped summary in this changelog.
 
-- **10:55 PM CT — v12: Shot List pill** (Claude, `testing` branch)
-  New "Shot List" pill. Its dropdown has two links: your Shot List app, and the new Trip Planner page (added to the shot-list site at /trip.html) with 40 questions in 13 sections to plan a trip with friends. Not on `main` yet.
+### Commit log
 
-- **10:40 PM CT — v11: App Roadmap** (Claude, `testing` branch)
-  New "App Roadmap" pill. Its dropdown is 12 step pills joined by one line, from naming who the app is for to sharing it publicly. Tap a step to check it off (the pill shows how many are done, like 2/12). Hold a step to change or delete it, and add your own steps at the top. Progress syncs like your notes. Not on `main` yet.
-
-## 2026-10-09
-
-- **2:25 PM CT — v10: Portfolio pill fixed** (Claude, `testing` branch)
-  "Daxton's Portfolio" now looks exactly like the other pills. Tapping it goes straight to Daxton's Way (daxtontessmer-ai.github.io/DaxtonTessmer/DaxtonWay4721_linktree.html). Removed the slide-over page from v8. Not on `main` yet.
-
-- **2:20 PM CT — v9: Live by** (Claude, `testing` branch)
-  Added a "Live by" pill next to School. Tap it to add things to live by, each up to 15 words. Each one is its own pill with nothing underneath it (no second layer). Hold one to edit or delete it. Syncs like the others. Not on `main` yet.
-
-- **2:15 PM CT — v8: Daxton's Portfolio** (Claude, `testing` branch)
-  Added a light "Daxton's Portfolio" pill under the others (no dropdown). Tapping it slides your portfolio page (daxtontessmer-ai.github.io/DaxtonTessmer) in over the app. "‹ Back" (or swiping right on the top bar) slides back. "Open" shows it in Safari. Not on `main` yet.
-
-- **2:05 PM CT — v7: hold to edit or delete** (Claude, `testing` branch)
-  Removed the Remove, Rename, Edit and × buttons. Hold a person, item or note for about half a second to change or delete it. Tapping still opens and closes as before. Deleting a person or item takes two taps so nothing goes by accident. Not on `main` yet.
-
-- **11:20 AM CT — v6: edit notes + faster loading** (Claude, `testing` branch)
-  Every note under a person (or any pill item) now has **Edit** and **×**: tap the note or Edit to change it (same 15-word limit), × to delete it. Each person/item also has **Rename**. Faster opening: the app now opens instantly from the copy saved on the phone and checks for updates in the background; if there's a new version, a "Tap to refresh" button appears. Photo shrunk from 345 KB to 186 KB, intro animation shortened from ~2.5s to under 1s, and the big unused icons are no longer downloaded on first open. Not on `main` yet.
-
-- **2:05 AM CT — v5: notes sync everywhere** (Claude)
-  Notes in all four pills now save to the private repo `daxtons-life-data`, so your phone, your Mac, and anyone you give the sync code to all see the same notes. Tap the Sync button (top right) and paste the sync code once per device. Works offline and catches up when back online. Deleting on one device removes it everywhere. Notes already on a phone carry over. Fixed the offline helper so it never serves old copies of your notes.
-
-- **1:52 AM CT — v4: Just dos, Work, School** (Claude, `testing` branch)
-  Added three new pills next to Relationships, each working the same way: add items, tap one to add notes (15 words max). Only one pill opens at a time. Existing Relationships notes are kept. Not on `main` yet.
-
-## 2026-10-08
-
-- **8:01 PM CT — v3: Relationships** (Claude)
-  Added a "Relationships" pill near the top. Tap it to add people; tap a person to add unlimited notes (stories, desires, things to remember), each up to 15 words. Notes save on this device and stay after closing the app.
-
-- **2:47 PM CT — v2: motto line** (Claude)
-  Added "If it's not a hell yes, it's a no." under the headline on the landing page.
-
-- **1:40 PM CT — v1: first version** (Claude)
-  Created the repo with three branches: `main`, `testing` (copy of main for experiments), and `Beta` (next iteration).
-  Landing page shows Daxton's photo full screen with "Hello Daxton, let's take over the world."
-  Installable on iPhone from Safari (Add to Home Screen), with the photo as the app icon, and works offline.
+- **2026-10-07 07:49 PM CDT** — `f81bb3a` — Added the protective `.gitignore` to `main`.
+- **2026-10-07 07:53 PM CDT** — `1213b74` — Added `test-document.md` to `feature1`.
+- **2026-10-07 08:02:24 PM CDT** — Added `CHANGELOG.md` to `feature1` with the daily conversation summary and commit-history policy.
