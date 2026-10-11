@@ -2,6 +2,11 @@
 
 Every commit gets a summary and timestamp here (Central Time). Newest first.
 
+## 2026-10-10
+
+- **10:40 PM CT — v11: App Roadmap** (Claude, `testing` branch)
+  New "App Roadmap" pill. Its dropdown is 12 step pills joined by one line, from naming who the app is for to sharing it publicly. Tap a step to check it off (the pill shows how many are done, like 2/12). Hold a step to change or delete it, and add your own steps at the top. Progress syncs like your notes. Not on `main` yet.
+
 ## 2026-10-09
 
 - **2:25 PM CT — v10: Portfolio pill fixed** (Claude, `testing` branch)

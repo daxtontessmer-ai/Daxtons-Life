@@ -80,6 +80,20 @@
     .meta .over { color:#ff8a7a; }
     .rm { border:0; background:none; color:var(--dim); font:inherit; font-size:12px; cursor:pointer; padding:0; text-decoration:underline; }
     [hidden] { display:none !important; }
+    .steps { list-style:none; padding:0; margin:12px 0 0; position:relative; display:flex; flex-direction:column; gap:10px; }
+    .steps::before { content:""; position:absolute; left:9px; top:14px; bottom:14px; width:2px; border-radius:2px; background:rgba(244,241,234,.22); }
+    .step { position:relative; display:flex; align-items:center; gap:10px; padding-left:0; }
+    .step .dot { flex:none; position:relative; z-index:1; width:20px; height:20px; border-radius:50%; background:#161616;
+                 border:2px solid rgba(244,241,234,.45); display:grid; place-items:center; }
+    .step.done .dot { background:var(--ink); border-color:var(--ink); }
+    .step.done .dot::after { content:""; width:7px; height:4px; border:2px solid #0b0b0b; border-top:0; border-right:0; transform:translateY(-1px) rotate(-45deg); }
+    .step-pill { flex:1; min-width:0; text-align:left; font:inherit; font-size:14px; line-height:1.35; color:var(--ink);
+                 background:rgba(244,241,234,.1); border:1px solid rgba(244,241,234,.16); border-radius:999px; padding:9px 14px; cursor:pointer;
+                 -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action:manipulation; }
+    .step-pill span { overflow-wrap:anywhere; }
+    .step.done .step-pill { color:var(--dim); background:rgba(244,241,234,.05); }
+    .step-pill.pressing { transform:scale(.97); background:rgba(244,241,234,.16); transition:transform .45s, background .45s; }
+    .step.editing { display:block; }
     .flat { list-style:none; padding:0; margin-top:10px; display:flex; flex-direction:column; gap:6px; }
     a.pill { text-decoration:none; }
     .people .pill, .note.holdable { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action:manipulation; }
@@ -144,7 +158,8 @@
       { key:"justdo", title:"Just dos",      oldLs:"dl-justdos",       addPh:"Add something to just do", notePh:"A detail, step, or reminder",         rmLabel:"Remove",        empty:"Nothing yet. Add your first one above." },
       { key:"work",   title:"Work",          oldLs:"dl-work",          addPh:"Add a work item",        notePh:"A task, idea, or thing to remember",    rmLabel:"Remove",        empty:"Nothing yet. Add your first work item above." },
       { key:"school", title:"School",        oldLs:"dl-school",        addPh:"Add a class or project", notePh:"An assignment, idea, or reminder",     rmLabel:"Remove",        empty:"Nothing yet. Add your first class or project above." },
-      { key:"liveby", title:"Live by",       oldLs:"dl-liveby",        addPh:"Something to live by",   flat:true,                                                                empty:"Nothing yet. Add your first one above." }
+      { key:"liveby", title:"Live by",       oldLs:"dl-liveby",        addPh:"Something to live by",   flat:true,                                                                empty:"Nothing yet. Add your first one above." },
+      { key:"path",   title:"App Roadmap",   oldLs:"dl-path",          addPh:"Add a step",             flat:true, steps:true,                                                    empty:"No steps yet. Add your first one above." }
     ];
     const MAX = 15, LS = "dl-data", SYNC = "dl-sync";
     const REPO = "daxtontessmer-ai/daxtons-life-data", FILE = "data.json";
@@ -294,6 +309,27 @@
         input.oninput = upd; upd(); sec_upd = upd;
         form.after(flatMeta);
       }
+      if (cfg.steps) {
+        list.className = "steps";
+        const SEED = [
+          "Name who the app is for and the one problem it solves",
+          "Talk to ten of those people about how they handle it today",
+          "Sketch the main screens on paper before building anything new",
+          "Build the smallest version that solves that problem start to finish",
+          "Use it yourself every day for two weeks and fix what annoys you",
+          "Hand it to five friends and watch them use it without helping",
+          "Fix the three things that confused or slowed them down most",
+          "Give everyone their own private account and data, not one shared code",
+          "Make it fast, reliable, and working with no signal before adding features",
+          "Launch to a small group and track who comes back every week",
+          "Ask returning users what they would miss most, then double down",
+          "Share it publicly once people use it without being reminded"
+        ];
+        const have = new Set(list_().map(i => i.id));
+        let added = false;
+        SEED.forEach((t, i) => { const id = "path-seed-" + (i + 1); if (!have.has(id)) { list_().push({ id, name: t, created: i + 1, updated: 1, notes: [], done: false }); added = true; } });
+        if (added) saveLocal();
+      }
       pillsBox.append(btn); panelsBox.append(panel);
 
       const sec = { render, close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } };
@@ -358,6 +394,17 @@
             setTimeout(() => { if (document.activeElement !== inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } }, 0);
             continue;
           }
+          if (cfg.steps) {
+            n.className = "step" + (it.done ? " done" : "");
+            const dot = el("span", "dot"); dot.setAttribute("aria-hidden", "true");
+            const pill = el("button", "step-pill"); pill.type = "button";
+            pill.setAttribute("aria-pressed", !!it.done);
+            pill.append(el("span", null, it.name));
+            holdable(pill, () => { editing = { id: it.id, text: it.name }; render(); },
+                     () => { it.done = !it.done; it.updated = now(); changed(); });
+            n.append(dot, pill); list.append(n);
+            continue;
+          }
           n.append(el("span", null, it.name)); n.classList.add("holdable");
           holdable(n, () => { editing = { id: it.id, text: it.name }; render(); });
           list.append(n);
@@ -366,7 +413,7 @@
 
       function render() {
         const items = live().sort((a, b) => (a.created || 0) - (b.created || 0));
-        count.textContent = items.length || "";
+        count.textContent = cfg.steps ? (items.length ? items.filter(i => i.done).length + "/" + items.length : "") : (items.length || "");
         list.replaceChildren();
         if (!items.length) list.append(el("li", "empty", cfg.empty));
         if (cfg.flat) { renderFlat(items); return; }
