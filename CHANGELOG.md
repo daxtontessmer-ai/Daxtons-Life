@@ -2,6 +2,11 @@
 
 Every commit gets a summary and timestamp here (Central Time). Newest first.
 
+## 2026-10-11
+
+- **12:02 AM CT — v20: focus on unfinished roadmap stages** (Codex, `testing` branch)
+  Added a Hide finished stages control that appears after progress begins. It filters completed stages out of the long mobile timeline while preserving accurate chapter totals, and Show all stages restores the full roadmap for review. Verified the filter and live chapter counts without changing saved data. Not on `main` yet.
+
 ## 2026-10-10
 
 - **11:57 PM CT — v19: clear next-stage guidance** (Codex, `testing` branch)
