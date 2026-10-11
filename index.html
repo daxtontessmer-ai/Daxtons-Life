@@ -141,6 +141,8 @@
     .note span { cursor:text; }
     .note.editing { padding:6px; background:rgba(244,241,234,.14); flex-direction:column; align-items:stretch; }
     .note.editing .row input { padding:7px 12px; font-size:16px; }
+    .stage-prompt-edit { width:100%; min-height:78px; resize:vertical; margin-top:7px; padding:9px 11px; border:1px solid rgba(244,241,234,.2);
+                         border-radius:12px; background:rgba(244,241,234,.07); color:var(--ink); font:inherit; font-size:16px; line-height:1.4; }
     .note.editing .meta { margin:4px 6px 0; }
     .ed { flex:none; border:0; background:none; color:var(--dim); font-size:13px; cursor:pointer; padding:2px 4px; }
     .links { display:flex; gap:14px; }
@@ -454,11 +456,13 @@
             n.classList.add("editing");
             const f = el("form", "row"), inp = el("input"), save = el("button", "add", "Save");
             inp.value = editing.text; inp.autocomplete = "off"; inp.setAttribute("aria-label", cfg.steps ? "Stage title" : "Entry text"); save.type = "submit";
+            const promptEdit = cfg.steps ? el("textarea", "stage-prompt-edit") : null;
+            if (promptEdit) { promptEdit.value = editing.prompt ?? it.prompt ?? ""; promptEdit.placeholder = "Question this stage should answer…"; promptEdit.setAttribute("aria-label", "Stage question"); }
             const meta = el("div", "meta"), cnt = el("span"), links = el("span", "links");
             const cancel = el("button", "rm", "Cancel"), del = el("button", "rm", "Delete");
             cancel.type = del.type = "button";
             const upd = () => { const w = words(inp.value); cnt.textContent = ""; save.disabled = !w || w > MAX; };
-            inp.oninput = () => { editing.text = inp.value; upd(); }; upd();
+            inp.oninput = () => { editing.text = inp.value; upd(); }; if (promptEdit) promptEdit.oninput = () => { editing.prompt = promptEdit.value; }; upd();
             inp.onkeydown = e => { if (e.key === "Escape") { editing = null; render(); } };
             cancel.onclick = () => { editing = null; render(); };
             del.onclick = () => { editing = null; remove(it); };
@@ -466,10 +470,10 @@
               e.preventDefault();
               const v = inp.value.trim().replace(/\s+/g, " ");
               if (!v || words(v) > MAX) return;
-              editing = null; it.name = v; it.updated = now(); changed();
+              it.name = v; if (promptEdit) it.prompt = promptEdit.value.trim(); editing = null; it.updated = now(); changed();
             };
             f.append(inp, save); links.append(cancel, del); meta.append(cnt, links);
-            n.append(f, meta); list.append(n);
+            n.append(f); if (promptEdit) n.append(promptEdit); n.append(meta); list.append(n);
             setTimeout(() => { if (document.activeElement !== inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } }, 0);
             continue;
           }
@@ -482,7 +486,7 @@
             pill.setAttribute("aria-expanded", open.has(it.id));
             if (it.phase) pill.append(el("span", "step-phase", it.phase));
             pill.append(el("span", null, it.name));
-            holdable(pill, () => { editing = { id: it.id, text: it.name }; render(); },
+            holdable(pill, () => { editing = { id: it.id, text: it.name, prompt: it.prompt || "" }; render(); },
                      () => { open.has(it.id) ? open.delete(it.id) : open.add(it.id); render(); });
             main.append(pill);
             if (open.has(it.id)) {
@@ -497,7 +501,7 @@
               answer.oninput = () => { clearTimeout(saveTimer); saved.textContent = "Saving…"; saveTimer = setTimeout(saveAnswer, 650); };
               answer.onblur = saveAnswer;
               answer.onkeydown = e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { saveAnswer(); answer.blur(); } };
-              edit.onclick = () => { saveAnswer(); editing = { id: it.id, text: it.name }; render(); };
+              edit.onclick = () => { saveAnswer(); editing = { id: it.id, text: it.name, prompt: it.prompt || "" }; render(); };
               done.onclick = () => { saveAnswer(); it.done = !it.done; it.updated = now(); changed(); };
               actionButtons.append(edit, done); actions.append(saved, actionButtons); detail.append(q, answer, actions); main.append(detail);
             }
