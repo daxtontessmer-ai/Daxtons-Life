@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-11
 
+- **12:12 AM CT — v22: editable roadmap questions** (Codex, `testing` branch)
+  Edit stage now opens both the stage title and its guiding question. Users can tailor the roadmap prompts to a specific app, save those changes through the existing sync system, or cancel without changing anything. Both editing fields have accessible labels and phone-sized text controls. Not on `main` yet.
+
 - **12:07 AM CT — v21: visible roadmap editing** (Codex, `testing` branch)
   Added a clearly labeled Edit stage action inside every expanded roadmap stage, so changing a stage title or reaching its delete option no longer depends on discovering the hold gesture. The existing hold gesture still works, answers are saved before editing opens, and the edit field now has an accessible label. Not on `main` yet.
 
