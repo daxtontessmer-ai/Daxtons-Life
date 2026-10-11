@@ -1,0 +1,55 @@
+name: Publish branch previews
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Copy Main UI
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: site/main
+      - name: Copy Beta UI
+        uses: actions/checkout@v4
+        with:
+          ref: Beta
+          path: site/Beta
+      - name: Copy Testing UI
+        uses: actions/checkout@v4
+        with:
+          ref: testing
+          path: site/testing
+      - name: Build preview landing page
+        shell: bash
+        run: |
+          rm -rf site/main/.git site/main/.github site/Beta/.git site/Beta/.github site/testing/.git site/testing/.github
+          touch site/.nojekyll
+          printf '%s\n' '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Daxton&apos;s Life — Branch Previews</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0d1117;color:#f0f6fc;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}main{width:min(760px,92vw)}h1{font-size:clamp(2rem,7vw,4rem);margin:0 0 8px}p,span{color:#8b949e}nav{display:grid;gap:14px;margin-top:30px}a{padding:22px 24px;border:1px solid #30363d;border-radius:16px;color:#f0f6fc;text-decoration:none;background:#161b22}a:hover{border-color:#58a6ff}strong,span{display:block}strong{font-size:1.3rem}</style></head><body><main><h1>Daxton&apos;s Life</h1><p>Choose a branch to view its latest UI.</p><nav><a href="./main/"><strong>Main</strong><span>Stable synced version</span></a><a href="./Beta/"><strong>Beta</strong><span>Alternate unlimited-notes version</span></a><a href="./testing/"><strong>Testing</strong><span>Newest experimental features</span></a></nav></main></body></html>' > site/index.html
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
