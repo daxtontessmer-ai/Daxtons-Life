@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-11
 
+- **12:07 AM CT — v21: visible roadmap editing** (Codex, `testing` branch)
+  Added a clearly labeled Edit stage action inside every expanded roadmap stage, so changing a stage title or reaching its delete option no longer depends on discovering the hold gesture. The existing hold gesture still works, answers are saved before editing opens, and the edit field now has an accessible label. Not on `main` yet.
+
 - **12:02 AM CT — v20: focus on unfinished roadmap stages** (Codex, `testing` branch)
   Added a Hide finished stages control that appears after progress begins. It filters completed stages out of the long mobile timeline while preserving accurate chapter totals, and Show all stages restores the full roadmap for review. Verified the filter and live chapter counts without changing saved data. Not on `main` yet.
 
