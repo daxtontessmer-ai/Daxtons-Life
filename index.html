@@ -120,6 +120,10 @@
     .roadmap-next { flex:none; border:0; border-radius:999px; padding:8px 12px; background:var(--ink); color:#0b0b0b; font:inherit; font-size:12px; font-weight:700; }
     .roadmap-track { height:6px; margin-top:11px; overflow:hidden; border-radius:99px; background:rgba(244,241,234,.14); }
     .roadmap-fill { display:block; width:0; height:100%; border-radius:inherit; background:#9fc7ff; transition:width .25s ease; }
+    .step-chapter { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:14px 2px 2px 32px;
+                    color:#9fc7ff; font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
+    .step-chapter:first-child { margin-top:2px; }
+    .step-chapter-count { color:var(--dim); letter-spacing:.04em; }
     .step.editing { display:block; }
     .flat { list-style:none; padding:0; margin-top:10px; display:flex; flex-direction:column; gap:6px; }
     a.pill { text-decoration:none; }
@@ -420,7 +424,22 @@
       }
 
       function renderFlat(items) {
+        const chapterFor = phase => ({ Vision:"Discover", Validate:"Discover", Value:"Discover", Business:"Discover",
+          Scope:"Plan", Experience:"Plan", Prototype:"Plan", Architecture:"Plan",
+          Build:"Build", Trust:"Build", Quality:"Build", Beta:"Build",
+          Measure:"Grow", Acquire:"Grow", Learn:"Grow", Retain:"Grow", Revenue:"Grow", Scale:"Grow" })[phase] || "Custom";
+        let lastChapter = null;
         for (const it of items) {
+          if (cfg.steps) {
+            const chapter = chapterFor(it.phase);
+            if (chapter !== lastChapter) {
+              const chapterItems = items.filter(entry => chapterFor(entry.phase) === chapter);
+              const heading = el("li", "step-chapter");
+              heading.append(el("span", null, chapter), el("span", "step-chapter-count", chapterItems.filter(entry => entry.done).length + "/" + chapterItems.length));
+              heading.setAttribute("aria-label", chapter + " chapter progress");
+              list.append(heading); lastChapter = chapter;
+            }
+          }
           const n = el("li", "note");
           if (editing && editing.id === it.id) {
             n.classList.add("editing");
