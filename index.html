@@ -113,6 +113,8 @@
     .step-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:9px; }
     .step-saved { min-height:1em; color:var(--dim); font-size:11px; }
     .step-done { border:0; border-radius:999px; padding:7px 11px; background:var(--ink); color:#0b0b0b; font:inherit; font-size:12px; font-weight:700; }
+    .step-action-buttons { display:flex; align-items:center; gap:9px; }
+    .step-edit { border:0; padding:6px 0; background:none; color:var(--dim); font:inherit; font-size:11px; text-decoration:underline; text-underline-offset:3px; }
     .roadmap-overview { margin-bottom:12px; padding:13px; border:1px solid rgba(244,241,234,.16); border-radius:16px; background:rgba(244,241,234,.06); }
     .roadmap-overview-top { display:flex; align-items:center; justify-content:space-between; gap:12px; }
     .roadmap-summary { font-size:13px; color:var(--dim); line-height:1.35; }
@@ -451,7 +453,7 @@
           if (editing && editing.id === it.id) {
             n.classList.add("editing");
             const f = el("form", "row"), inp = el("input"), save = el("button", "add", "Save");
-            inp.value = editing.text; inp.autocomplete = "off"; save.type = "submit";
+            inp.value = editing.text; inp.autocomplete = "off"; inp.setAttribute("aria-label", cfg.steps ? "Stage title" : "Entry text"); save.type = "submit";
             const meta = el("div", "meta"), cnt = el("span"), links = el("span", "links");
             const cancel = el("button", "rm", "Cancel"), del = el("button", "rm", "Delete");
             cancel.type = del.type = "button";
@@ -487,15 +489,17 @@
               const detail = el("div", "step-detail"), q = el("p", "step-question", it.prompt || "What needs to be true before this step is complete?");
               const answer = el("textarea"); answer.placeholder = "Write your decision, evidence, or next action…"; answer.value = it.answer || "";
               answer.setAttribute("aria-label", (it.phase || "Roadmap") + " answer");
-              const actions = el("div", "step-actions"), saved = el("span", "step-saved"), done = el("button", "step-done", it.done ? "Completed ✓" : "Mark complete");
-              done.type = "button";
+              const actions = el("div", "step-actions"), saved = el("span", "step-saved"), actionButtons = el("span", "step-action-buttons");
+              const edit = el("button", "step-edit", "Edit stage"), done = el("button", "step-done", it.done ? "Completed ✓" : "Mark complete");
+              edit.type = done.type = "button";
               let saveTimer = null;
               const saveAnswer = () => { clearTimeout(saveTimer); saveTimer = null; const v = answer.value.trim(); if (v === (it.answer || "")) return; it.answer = v; it.updated = now(); saveLocal(); queuePush(); saved.textContent = "Saved"; setTimeout(() => { if (saved.textContent === "Saved") saved.textContent = ""; }, 1400); };
               answer.oninput = () => { clearTimeout(saveTimer); saved.textContent = "Saving…"; saveTimer = setTimeout(saveAnswer, 650); };
               answer.onblur = saveAnswer;
               answer.onkeydown = e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { saveAnswer(); answer.blur(); } };
+              edit.onclick = () => { saveAnswer(); editing = { id: it.id, text: it.name }; render(); };
               done.onclick = () => { saveAnswer(); it.done = !it.done; it.updated = now(); changed(); };
-              actions.append(saved, done); detail.append(q, answer, actions); main.append(detail);
+              actionButtons.append(edit, done); actions.append(saved, actionButtons); detail.append(q, answer, actions); main.append(detail);
             }
             n.append(dot, main); list.append(n);
             continue;
