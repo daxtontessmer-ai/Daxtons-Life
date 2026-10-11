@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-10
 
+- **11:52 PM CT — v18: roadmap chapters** (Codex, `testing` branch)
+  Grouped the 18-stage App Roadmap into four scannable chapters—Discover, Plan, Build, and Grow—with a completed/total count for each. Custom stages are kept in their own chapter. This makes the full journey easier to understand and navigate on a phone without changing saved answers or progress. Not on `main` yet.
+
 - **11:47 PM CT — v17: safer roadmap autosave** (Codex, `testing` branch)
   App Roadmap answers now save automatically after a short pause while typing, rather than waiting for the field to lose focus. The stage shows Saving… and Saved feedback, reducing the chance of losing a decision when the app is closed or another stage is opened. Added accessible labels to every roadmap answer field. Not on `main` yet.
 
