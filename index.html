@@ -208,6 +208,7 @@
     .alarm-state { display:block; margin-top:6px; font-size:12px; color:var(--dim); }
     details.alarm-help summary { cursor:pointer; }
     details.alarm-help ol { margin:8px 0 0; padding-left:20px; display:flex; flex-direction:column; gap:4px; }
+    .push-note { margin:4px 0 10px; font-size:14px; line-height:1.4; opacity:.9; }
     .alarm-ring { position:fixed; inset:0; z-index:50; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
                   background:rgba(8,8,8,.94); padding:24px; text-align:center; animation:arPulse 1.2s ease-in-out infinite; }
     .alarm-ring.missed { animation:none; }
@@ -375,6 +376,26 @@
       } catch (e) { setStatus(e.auth ? "auth" : (navigator.onLine ? "error" : "offline")); }
       busy = false;
       if (again) { again = false; sync(); }
+    }
+    // ---------- Lock-screen alarms (web push) ----------
+    // Each phone saves its notification address to push-subs.json; a GitHub job sends the alarm at the right time.
+    const VAPID = "BNgHUzCdkLtM22Ty3O48IFwGl_ZeyFqYcblhW5xSURVc-51rKwgeO8pCUGaG8uKHx7NxKjlOdG81H5PQdxkAV_s";
+    const pushReady = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+    async function pushState() { if (!pushReady()) return "unsupported"; if (Notification.permission === "denied") return "denied"; const reg = await navigator.serviceWorker.ready; return (await reg.pushManager.getSubscription()) && Notification.permission === "granted" ? "on" : "off"; }
+    async function turnOnPush() {
+      if (!token) throw new Error("sync");
+      if (await Notification.requestPermission() !== "granted") throw new Error("denied");
+      const reg = await navigator.serviceWorker.ready, key = Uint8Array.from(atob(VAPID.replace(/-/g, "+").replace(/_/g, "/") + "==".slice(0, (4 - VAPID.length % 4) % 4)), c => c.charCodeAt(0));
+      const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:key });
+      const url = `https://api.github.com/repos/${REPO}/contents/push-subs.json`, H = { Authorization:"Bearer " + token, Accept:"application/vnd.github+json" };
+      for (let i = 0; i < 4; i++) {
+        const r = await fetch(url, { cache:"no-store", headers:H }); let list = {}, fsha;
+        if (r.ok) { const j = await r.json(); fsha = j.sha; list = JSON.parse(b64d(j.content)); } else if (r.status !== 404) throw new Error("load " + r.status);
+        list[deviceId + "|" + location.pathname] = { sub:sub.toJSON(), name:deviceName(), scope:location.pathname, updated:now() };
+        const w = await fetch(url, { method:"PUT", headers:H, body:JSON.stringify({ message:"Lock-screen alarms on " + deviceName(), content:b64e(JSON.stringify(list, null, 1)), sha:fsha }) });
+        if (w.ok) return; if (w.status !== 409 && w.status !== 422) throw new Error("save " + w.status);
+      }
+      throw new Error("busy");
     }
     function queuePush() { if (!token) return; clearTimeout(pushTimer); pushTimer = setTimeout(sync, 1200); }
     addEventListener("online", sync);
@@ -736,10 +757,10 @@
       const panel = el("div", "panel"); panel.hidden = true;
       const form = el("form", "alarm-form"), name = el("input"), at = el("input"), actions = el("div", "alarm-actions");
       name.placeholder = "Alarm name"; name.required = true; name.maxLength = 80; at.type = "datetime-local"; at.required = true;
-      const add = el("button", "add", "Schedule alarm"), enable = el("button", "rm", "Enable web notifications"); add.type = "submit"; enable.type = "button";
+      const add = el("button", "add", "Schedule alarm"), enable = el("button", "rm", "Turn on lock-screen alarms"); add.type = "submit"; enable.type = "button";
       const help = el("details", "alarm-help");
       const setup = el("div", "alarm-setup");
-      setup.innerHTML = '<b>Ring with the app closed or phone locked</b><br>A website can’t make sound on its own, so each alarm can also become a real iPhone Clock alarm. Set this up once:'
+      setup.innerHTML = '<b>Optional: real Clock alarm</b><br>Lock-screen alarms use the normal notification sound (quiet if your phone is on silent or Focus). For a full ringing alarm that beats silent mode, each alarm can also become an iPhone Clock alarm. Set this up once:'
         + '<div class="links"><a href="shortcuts://create-shortcut" target="_top">1. Make the shortcut</a>'
         + '<a class="test-link" href="#" target="_top">2. Test it (alarm in 2 min)</a></div>'
         + '<p style="margin:8px 0 0">Name it <b>Daxtons Life Alarm</b> and follow the steps under “How to make the shortcut” below. The first time it runs, iPhone asks to let Shortcuts create alarms: tap <b>Allow</b>. If you tapped Don’t Allow, go to <b>Settings › Privacy &amp; Security › Shortcuts</b> (or delete and re-add the Create Alarm action). Then tap <b>Set iPhone alarm</b> on any alarm below.</p>';
@@ -797,7 +818,23 @@
         items.forEach(item => { const li = el("li", "alarm-card" + (item.firedAt ? " fired" : "")); li.append(el("strong", null, item.name)); const time = el("time", null, new Date(item.at).toLocaleString(undefined, { dateStyle:"medium", timeStyle:"short" })); time.dateTime = item.at; li.append(time); const row = el("div", "alarm-actions"), ph = phoneAlarmLink(item), cal = el("button", "rm", "Add to calendar"), remove = el("button", "rm danger", "Delete"); cal.type = remove.type = "button"; cal.onclick = () => calendar(item); remove.onclick = () => { item.deleted = true; item.updated = now(); changed(); }; row.append(ph, cal, remove); if (rung.has(item.id) || item.firedAt) li.append(el("span", "alarm-state", rung.has(item.id) ? "Rang on this device" : "Went off on another device")); li.append(row); list.append(li); fire(item); });
       }
       form.onsubmit = event => { event.preventDefault(); const value = name.value.trim(); if (!value || !at.value) return; data.sections.alarms.push({ id:"alarm-"+now()+Math.random().toString(36).slice(2,6), name:value, at:new Date(at.value).toISOString(), created:now(), updated:now(), firedAt:null }); name.value = ""; resetDate(); changed(); };
-      enable.onclick = async () => { if (!("Notification" in window)) { alert("Web notifications are not supported here. Use Add to phone calendar instead."); return; } const permission = await Notification.requestPermission(); enable.textContent = permission === "granted" ? "Web notifications enabled" : "Notifications not enabled"; };
+      const pushNote = el("p", "push-note"); setup.before(pushNote);
+      const ios = /iPhone|iPad/.test(navigator.userAgent), home = navigator.standalone || matchMedia("(display-mode: standalone)").matches;
+      async function showPush() {
+        const st = await pushState().catch(() => "off");
+        enable.hidden = st === "on";
+        pushNote.innerHTML = st === "on" ? "✅ <b>Lock-screen alarms are on for this " + deviceName() + ".</b> Alarms buzz with the app closed and repeat every minute until you tap Turn off or Snooze."
+          : st === "denied" ? "Notifications are blocked. Turn them on in <b>Settings › Notifications › Daxton’s Life</b>, then come back and tap Turn on lock-screen alarms."
+          : st === "unsupported" ? (ios && !home ? "To get alarms with the app closed, open Daxton’s Life from its <b>Home Screen icon</b> (not Safari), then tap Turn on lock-screen alarms here." : "This browser can’t get alarms with the app closed. Use the iPhone app from your Home Screen.")
+          : "Tap <b>Turn on lock-screen alarms</b> and then <b>Allow</b> so alarms reach this " + deviceName() + " even when the app is closed.";
+      }
+      showPush();
+      enable.onclick = async () => {
+        if (!pushReady()) { showPush(); return; }
+        enable.disabled = true; enable.textContent = "Turning on…";
+        try { await turnOnPush(); } catch (e) { pushNote.textContent = e.message === "sync" ? "Turn on Sync first (top right), then try again." : e.message === "denied" ? "Notifications weren’t allowed. Settings › Notifications › Daxton’s Life to turn them on." : "Couldn’t turn it on (" + e.message + "). Check your connection and try again."; enable.disabled = false; enable.textContent = "Turn on lock-screen alarms"; return; }
+        enable.disabled = false; enable.textContent = "Turn on lock-screen alarms"; showPush();
+      };
       const sec = { render, close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } };
       btn.onclick = () => { const opening = panel.hidden; all.forEach(section => section.close()); if (opening) { panel.hidden = false; btn.setAttribute("aria-expanded", "true"); } };
       setInterval(() => live().forEach(fire), 5000);
@@ -847,9 +884,10 @@
         $("alarmStop").textContent = missed ? "OK" : "Turn off alarm";
         $("alarmSound").hidden = true;
       }
-      $("alarmSnooze").onclick = () => { const it = current; stop(); if (!it) return;
+      const markStopped = () => { const it = current && data.sections.alarms.find(x => x.id === current.id); if (it && !it.stoppedAt) { it.stoppedAt = now(); it.updated = now(); changed(); } };  // tells the lock-screen sender to stop repeating
+      $("alarmSnooze").onclick = () => { markStopped(); const it = current; stop(); if (!it) return;
         data.sections.alarms.push({ id:"alarm-" + now() + Math.random().toString(36).slice(2, 6), name:it.name, at:new Date(Date.now() + 10 * 60000).toISOString(), created:now(), updated:now(), firedAt:null }); changed(); };
-      $("alarmStop").onclick = stop;
+      $("alarmStop").onclick = () => { markStopped(); stop(); };
       $("alarmSound").onclick = () => { unlock(); audio.play().catch(() => {}); $("alarmSound").hidden = true; };
       return {
         ring(item) {

@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-12
 
+- **5:35 PM CT — v37: lock-screen alarms, app side** (Claude, `testing` branch)
+  The Alarms dropdown has a "Turn on lock-screen alarms" button that lets this phone receive alarm notifications with the app closed, and Turn off / Snooze now tell other devices the alarm was handled. The background sender that delivers them isn't added yet (waiting on Daxton's OK), so nothing arrives yet. Not on `main`.
+
 - **5:15 PM CT — v36: sync never erases sections** (Claude, `testing` branch)
   Fixed a bug where an older copy of the app (still cached on a device) erased the whole Alarms list when it synced, because it only kept the sections it knew about. Sync now keeps every section, even ones that version doesn't show. Alarms were restored. Not on `main` yet.
 

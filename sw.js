@@ -1,5 +1,5 @@
 // Keeps the app fast and working with no signal. Bump VERSION whenever files change.
-const VERSION = "v36";
+const VERSION = "v37";
 const FILES = ["./", "index.html", "manifest.webmanifest", "img/daxton.jpg", "img/icon-180.png"];
 
 self.addEventListener("install", e => {
@@ -43,7 +43,21 @@ self.addEventListener("fetch", e => {
   }).catch(() => {}));
 });
 
+// Lock-screen alarm sent by the GitHub alarm job (works with the app closed)
+self.addEventListener("push", e => {
+  let d = {}; try { d = e.data ? e.data.json() : {}; } catch (x) { d = { body: e.data && e.data.text() }; }
+  e.waitUntil(self.registration.showNotification(d.title || "⏰ Alarm", {
+    body: d.body || "Daxton's Life", tag: d.tag || "alarm", icon: "img/icon-192.png",
+    requireInteraction: true, data: { url: d.url || "./" }
+  }));
+});
+
+// Tapping any alarm clears the rest and opens the app, where Snooze / Turn off are waiting
 self.addEventListener("notificationclick", e => {
   e.notification.close();
-  e.waitUntil(clients.matchAll({ type:"window", includeUncontrolled:true }).then(windows => windows[0] ? windows[0].focus() : clients.openWindow("./")));
+  const url = new URL((e.notification.data && e.notification.data.url) || "./", self.registration.scope).href;
+  e.waitUntil(Promise.all([
+    self.registration.getNotifications().then(ns => ns.forEach(n => n.close())),
+    clients.matchAll({ type:"window", includeUncontrolled:true }).then(ws => ws[0] ? ws[0].focus() : clients.openWindow(url))
+  ]));
 });
