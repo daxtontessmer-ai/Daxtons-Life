@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-12
 
+- **4:15 PM CT — Set iPhone alarm opens Shortcuts reliably** (Claude, `testing` branch)
+  "Set iPhone alarm" is now a real link (opened from the top of the app, even inside Compare versions) instead of a script redirect, which iPhones were silently blocking. Added a quick way to test the shortcut on its own. Not on `main` yet.
+
 - **4:10 PM CT — alarms that actually go off + dropdown scrolling fix** (Claude, `testing` branch)
   Alarms now ring with a full-screen alert, a repeating beep and Stop / Snooze 5 min, instead of a hidden pop-up. Each device rings on its own, so a preview open inside Compare versions can no longer silently use up an alarm. If the phone was asleep, the alarm shows as Missed when you open the app. New "Set iPhone alarm" button creates a real Clock alarm through Apple Shortcuts (one-time setup explained in the Alarms dropdown), so it rings even when the phone is locked. Dropdowns now size themselves to the space left on screen, so the bottom buttons can be reached and tapped. Not on `main` yet.
 
