@@ -1,5 +1,5 @@
 // Keeps the app fast and working with no signal. Bump VERSION whenever files change.
-const VERSION = "v29";
+const VERSION = "v31";
 const FILES = ["./", "index.html", "manifest.webmanifest", "img/daxton.jpg", "img/icon-180.png"];
 
 self.addEventListener("install", e => {
@@ -41,4 +41,9 @@ self.addEventListener("fetch", e => {
     }
     await (await caches.open(VERSION)).put(key, copy);
   }).catch(() => {}));
+});
+
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  e.waitUntil(clients.matchAll({ type:"window", includeUncontrolled:true }).then(windows => windows[0] ? windows[0].focus() : clients.openWindow("./")));
 });
