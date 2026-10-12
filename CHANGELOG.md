@@ -4,6 +4,12 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-12
 
+- **4:32 PM CT — v31: DONE section for Just dos** (Codex, `testing`)
+  Just dos now separates unfinished items from a clearly labeled DONE section. Each item has a one-tap Done control, completed items move below immediately, and Undo returns them to the active list while preserving notes and sync data. Not on `main`.
+
+- **4:05 PM CT — v30: scheduled alarms prototype** (Codex, `testing`)
+  Added an Alarms pill with a one-week default, saved alarm names and times, web notification permission, due-alarm checking, deletion, and one-tap calendar files that can create a durable phone reminder even after the website is closed. Not on `main`.
+
 - **3:30 PM CT — v28: Compare versions** (Claude, `main`)
   New "Compare versions" pill. It opens a page inside the app showing Main, Testing and Beta, each with its four newest changes and a live, usable preview. On a phone you switch between them with tabs; on a wide screen all three sit side by side. "Open" goes to that version full screen, and "‹ Back" returns to your app.
 
