@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-12
 
+- **4:25 PM CT — alarm sound, Snooze 10 min, Turn off alarm, iPhone alarm setup** (Claude, `testing` branch)
+  When an alarm goes off in the app it now plays a loud repeating alarm sound that also works with the iPhone silent switch on (after you tap the app once), shows the alarm's name big on screen, and has "Snooze 10 min" and "Turn off alarm". If the phone blocks the sound, a "Tap for sound" button appears. The Alarms dropdown has a new setup card with "Make the shortcut" and "Test it (alarm in 2 min)" links plus the Settings path, so "Set iPhone alarm" can create real Clock alarms that ring with the app closed. Not on `main` yet.
+
 - **4:15 PM CT — Set iPhone alarm opens Shortcuts reliably** (Claude, `testing` branch)
   "Set iPhone alarm" is now a real link (opened from the top of the app, even inside Compare versions) instead of a script redirect, which iPhones were silently blocking. Added a quick way to test the shortcut on its own. Not on `main` yet.
 
