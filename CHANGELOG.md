@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-12
 
+- **4:45 PM CT — testing moved to `main`** (Claude)
+  Main now matches testing: Links section, Lessons, Compare versions, Just dos DONE section, and the full Alarms pill (sound, Snooze 10 min, Turn off alarm, Set iPhone alarm through Shortcuts). Your notes and alarms were already shared through `daxtons-life-data`.
+
 - **4:25 PM CT — alarm sound, Snooze 10 min, Turn off alarm, iPhone alarm setup** (Claude, `testing` branch)
   When an alarm goes off in the app it now plays a loud repeating alarm sound that also works with the iPhone silent switch on (after you tap the app once), shows the alarm's name big on screen, and has "Snooze 10 min" and "Turn off alarm". If the phone blocks the sound, a "Tap for sound" button appears. The Alarms dropdown has a new setup card with "Make the shortcut" and "Test it (alarm in 2 min)" links plus the Settings path, so "Set iPhone alarm" can create real Clock alarms that ring with the app closed. Not on `main` yet.
 
