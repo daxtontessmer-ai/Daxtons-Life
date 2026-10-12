@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-12
 
+- **5:15 PM CT — v36: sync never erases sections** (Claude, `testing` branch)
+  Fixed a bug where an older copy of the app (still cached on a device) erased the whole Alarms list when it synced, because it only kept the sections it knew about. Sync now keeps every section, even ones that version doesn't show. Alarms were restored. Not on `main` yet.
+
 - **4:45 PM CT — testing moved to `main`** (Claude)
   Main now matches testing: Links section, Lessons, Compare versions, Just dos DONE section, and the full Alarms pill (sound, Snooze 10 min, Turn off alarm, Set iPhone alarm through Shortcuts). Your notes and alarms were already shared through `daxtons-life-data`.
 

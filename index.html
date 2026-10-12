@@ -317,13 +317,16 @@
     // ---------- Merge: newest edit of each item wins; deletions are remembered ----------
     function merge(a, b) {
       const out = empty();
-      for (const c of SECTIONS) {
+      // Merge every section either side has, even ones this version doesn't show, so nothing gets erased
+      const keys = new Set([...SECTIONS.map(c => c.key), ...Object.keys((a||{}).sections||{}), ...Object.keys((b||{}).sections||{})]);
+      for (const key of keys) {
         const m = new Map();
-        for (const it of [...((a.sections||{})[c.key]||[]), ...((b.sections||{})[c.key]||[])]) {
+        for (const it of [...(((a||{}).sections||{})[key]||[]), ...(((b||{}).sections||{})[key]||[])]) {
+          if (!it || !it.id) continue;
           const cur = m.get(it.id);
           if (!cur || (it.updated||0) > (cur.updated||0)) m.set(it.id, it);
         }
-        out.sections[c.key] = [...m.values()];
+        out.sections[key] = [...m.values()];
       }
       out.devices = { ...((b||{}).devices||{}) };
       for (const [k, v] of Object.entries((a||{}).devices||{})) if (!out.devices[k] || (v.last||0) > (out.devices[k].last||0)) out.devices[k] = v;
