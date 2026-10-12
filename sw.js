@@ -1,5 +1,5 @@
 // Keeps the app fast and working with no signal. Bump VERSION whenever files change.
-const VERSION = "v37";
+const VERSION = "v38";
 const FILES = ["./", "index.html", "manifest.webmanifest", "img/daxton.jpg", "img/icon-180.png"];
 
 self.addEventListener("install", e => {
@@ -25,6 +25,7 @@ self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
   const url = new URL(e.request.url);
   if (url.origin !== self.location.origin) return; // never touch GitHub sync calls
+  if (e.request.mode === "navigate" && /\.html$/.test(url.pathname) && !/index\.html$/.test(url.pathname)) return; // other pages (Photo editor) load themselves
   const isPage = e.request.mode === "navigate";
   const key = isPage ? "index.html" : e.request;
   const cachedP = caches.open(VERSION).then(c => c.match(key, { ignoreSearch: isPage }));

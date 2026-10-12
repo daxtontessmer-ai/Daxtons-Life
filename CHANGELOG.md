@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-12
 
+- **5:40 PM CT — v38: Photo editor link** (Claude, `testing` branch)
+  New "Photo editor" pill under Links opens Daxton's photo editor (styles like B&W, Golden Hour and Film, people cutouts and stickers, all done on the phone). It has a "‹ Daxton's Life" link to get back. Not on `main` yet.
+
 - **5:35 PM CT — v37: lock-screen alarms, app side** (Claude, `testing` branch)
   The Alarms dropdown has a "Turn on lock-screen alarms" button that lets this phone receive alarm notifications with the app closed, and Turn off / Snooze now tell other devices the alarm was handled. The background sender that delivers them isn't added yet (waiting on Daxton's OK), so nothing arrives yet. Not on `main`.
 

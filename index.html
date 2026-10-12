@@ -922,6 +922,12 @@
     pf.insertAdjacentHTML("beforeend", CHEV);
     linkPills.append(pf);
 
+    // ---------- Photo editor: on-device photo styles, cutouts and stickers ----------
+    const pe = el("a", "pill"); pe.href = "photo-editor.html";
+    pe.append(document.createTextNode("Photo editor "));
+    pe.insertAdjacentHTML("beforeend", CHEV);
+    linkPills.append(pe);
+
     // ---------- Shot List: dropdown with links to the Shot List app and its Trip Planner ----------
     (() => {
       const SL = "https://daxtontessmer-ai.github.io/shot-list/";
