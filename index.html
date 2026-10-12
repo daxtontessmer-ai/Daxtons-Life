@@ -195,6 +195,20 @@
     .sheet-card b { color:var(--ink); font-weight:600; }
     .sheet-msg:empty { display:none; }
     .sheet-actions { display:flex; flex-wrap:wrap; gap:16px; }
+    .alarm-form { display:grid; grid-template-columns:1fr; gap:8px; }
+    .alarm-form input { width:100%; font:inherit; font-size:16px; color:var(--ink); background:rgba(244,241,234,.08); border:1px solid rgba(244,241,234,.16); border-radius:14px; padding:10px 12px; color-scheme:dark; }
+    .alarm-actions { display:flex; flex-wrap:wrap; gap:8px; }
+    .alarm-help { margin:9px 2px 0; color:var(--dim); font-size:12px; line-height:1.4; }
+    .alarm-list { list-style:none; padding:0; margin:12px 0 0; display:flex; flex-direction:column; gap:8px; }
+    .alarm-card { padding:12px; border:1px solid rgba(244,241,234,.16); border-radius:16px; background:rgba(244,241,234,.07); }
+    .alarm-card strong,.alarm-card time { display:block; }
+    .alarm-card time { margin:2px 0 9px; color:var(--dim); font-size:13px; }
+    .alarm-card.fired { opacity:.58; }
+    .todo-row { display:flex; align-items:center; gap:8px; }
+    .todo-row .pill { flex:1; min-width:0; }
+    .todo-toggle { flex:none; border:1px solid rgba(244,241,234,.24); border-radius:999px; padding:7px 10px; background:rgba(244,241,234,.06); color:var(--ink); font:inherit; font-size:11px; font-weight:700; cursor:pointer; }
+    .todo-done-label { margin:14px 4px 2px; color:#7fd18b; font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; }
+    .person.done-item .pill { color:var(--dim); background:rgba(244,241,234,.035); }
   </style>
   <section class="cmp-page" id="cmpPage" hidden aria-label="Compare versions">
     <div class="cmp-bar">
@@ -235,13 +249,14 @@
     // ---------- Sections: each pill works the same way ----------
     const SECTIONS = [
       { key:"rel",    title:"Relationships", dated:true, oldLs:"dl-relationships", addPh:"Add a person",           notePh:"A story, desire, or thing to remember", rmLabel:"Remove person", empty:"No one yet. Add your first person above." },
-      { key:"justdo", title:"Just dos",      oldLs:"dl-justdos",       addPh:"Add something to just do", notePh:"A detail, step, or reminder",         rmLabel:"Remove",        empty:"Nothing yet. Add your first one above." },
+      { key:"justdo", title:"Just dos",      oldLs:"dl-justdos",       addPh:"Add something to just do", notePh:"A detail, step, or reminder", done:true, rmLabel:"Remove",        empty:"Nothing yet. Add your first one above." },
       { key:"work",   title:"Work",          oldLs:"dl-work",          addPh:"Add a work item",        notePh:"A task, idea, or thing to remember",    rmLabel:"Remove",        empty:"Nothing yet. Add your first work item above." },
       { key:"school", title:"School",        oldLs:"dl-school",        addPh:"Add a class or project", notePh:"An assignment, idea, or reminder",     rmLabel:"Remove",        empty:"Nothing yet. Add your first class or project above." },
       { key:"liveby", title:"Live by",       oldLs:"dl-liveby",        addPh:"Something to live by",   flat:true,                                                                empty:"Nothing yet. Add your first one above." },
       { key:"crazy",  title:"Crazy IdEaS",   oldLs:"dl-crazyideas",    addPh:"Add a crazy idea",       flat:true,                                                                empty:"No crazy ideas yet. Add your first one above." },
       { key:"lessons", title:"Lessons",      oldLs:"dl-lessons",       addPh:"Add a lesson",           flat:true,                                                                empty:"No lessons yet. Add your first one above." },
-      { key:"path",   title:"App Roadmap",   oldLs:"dl-path",          addPh:"Add a step",             flat:true, steps:true,                                                    empty:"No steps yet. Add your first one above." }
+      { key:"path",   title:"App Roadmap",   oldLs:"dl-path",          addPh:"Add a step",             flat:true, steps:true,                                                    empty:"No steps yet. Add your first one above." },
+      { key:"alarms", title:"Alarms",        oldLs:"dl-alarms",        alarm:true,                                                                     empty:"No alarms scheduled yet." }
     ];
     const MAX = Infinity, LS = "dl-data", SYNC = "dl-sync";
     const REPO = "daxtontessmer-ai/daxtons-life-data", FILE = "data.json";
@@ -444,7 +459,7 @@
         if (cfg.flat && words(v) > MAX) return;
         input.value = ""; if (sec_upd) sec_upd();
         const id = cfg.key + now() + Math.random().toString(36).slice(2, 6);
-        list_().push({ id, name: v, created: now(), updated: now(), notes: [] });
+        list_().push({ id, name: v, created: now(), updated: now(), notes: [], done:false });
         open.add(id); focusId = id; changed();
       };
       const setNotes = (it, notes, dates) => {
@@ -561,7 +576,7 @@
 
       function render() {
         const items = live().sort((a, b) => (a.created || 0) - (b.created || 0));
-        count.textContent = cfg.steps ? (items.length ? items.filter(i => i.done).length + "/" + items.length : "") : (items.length || "");
+        count.textContent = cfg.steps ? (items.length ? items.filter(i => i.done).length + "/" + items.length : "") : cfg.done ? (items.filter(i => !i.done).length || "") : (items.length || "");
         if (cfg.steps && roadmapSummary) {
           const completed = items.filter(i => i.done).length, answered = items.filter(i => (i.answer || "").trim()).length;
           const percent = items.length ? Math.round(completed / items.length * 100) : 0;
@@ -588,8 +603,12 @@
           if (items.length && !shown.length) list.append(el("li", "empty", "Every roadmap stage is complete. Show all stages to review your work."));
           renderFlat(shown, items); return;
         }
-        for (const it of items) {
+        const orderedItems = cfg.done ? [...items.filter(i => !i.done), ...items.filter(i => i.done)] : items;
+        let doneHeading = false;
+        for (const it of orderedItems) {
+          if (cfg.done && it.done && !doneHeading) { list.append(el("li", "todo-done-label", "DONE · " + items.filter(i => i.done).length)); doneHeading = true; }
           const li = el("li", "person"), isOpen = open.has(it.id);
+          if (cfg.done && it.done) li.classList.add("done-item");
           const b = el("button", "pill"); b.setAttribute("aria-expanded", isOpen);
           b.append(el("span", "nm", it.name), el("span", "n", (it.notes || []).length || ""));
           b.insertAdjacentHTML("beforeend", CHEV);
@@ -613,7 +632,12 @@
             setTimeout(() => { if (document.activeElement !== ri && !editing?.armed) ri.focus(); }, 0);
             list.append(li); continue;
           }
-          li.append(b);
+          if (cfg.done) {
+            const row = el("div", "todo-row"), toggle = el("button", "todo-toggle", it.done ? "Undo" : "Done"); toggle.type = "button";
+            toggle.setAttribute("aria-label", (it.done ? "Move out of Done: " : "Mark done: ") + it.name);
+            toggle.onclick = () => { it.done = !it.done; it.updated = now(); open.delete(it.id); changed(); };
+            row.append(b, toggle); li.append(row);
+          } else li.append(b);
           if (isOpen) {
             const box = el("div", "notes"), ul = el("ul");
             (it.notes || []).forEach((t, i) => {
@@ -675,7 +699,42 @@
       }
       return sec;
     }
-    SECTIONS.forEach(c => all.push(makeSection(c)));
+    function makeAlarmSection(cfg) {
+      const btn = el("button", "pill"); btn.type = "button"; btn.setAttribute("aria-expanded", "false");
+      const count = el("span", "n"); btn.append(document.createTextNode(cfg.title + " "), count); btn.insertAdjacentHTML("beforeend", CHEV);
+      const panel = el("div", "panel"); panel.hidden = true;
+      const form = el("form", "alarm-form"), name = el("input"), at = el("input"), actions = el("div", "alarm-actions");
+      name.placeholder = "Alarm name"; name.required = true; name.maxLength = 80; at.type = "datetime-local"; at.required = true;
+      const add = el("button", "add", "Schedule alarm"), enable = el("button", "rm", "Enable web notifications"); add.type = "submit"; enable.type = "button";
+      const help = el("p", "alarm-help", "For a reminder that still works after closing the website, tap Add to phone calendar after scheduling it.");
+      const list = el("ul", "alarm-list"); actions.append(add, enable); form.append(name, at, actions); panel.append(form, help, list); pillsBox.append(btn); panelsBox.append(panel);
+      const localValue = date => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      const resetDate = () => { at.value = localValue(new Date(Date.now() + 7 * 86400000)); at.min = localValue(new Date()); }; resetDate();
+      const live = () => data.sections.alarms.filter(item => !item.deleted).sort((a, b) => new Date(a.at) - new Date(b.at));
+      function fire(item) {
+        if (item.firedAt || new Date(item.at).getTime() > Date.now()) return;
+        item.firedAt = now(); item.updated = now(); saveLocal(); queuePush(); render();
+        if ("Notification" in window && Notification.permission === "granted") navigator.serviceWorker.ready.then(reg => reg.showNotification(item.name, { body:"Scheduled alarm from Daxton's Life", icon:"img/icon-192.png", tag:item.id }));
+        else alert("Alarm: " + item.name);
+      }
+      function calendar(item) {
+        const start = new Date(item.at), end = new Date(start.getTime() + 5 * 60000), stamp = d => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+        const safe = String(item.name).replace(/[\\,;]/g, "\\$&").replace(/\n/g, "\\n");
+        const ics = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Daxtons Life//Alarm//EN","BEGIN:VEVENT","UID:"+item.id+"@daxtons-life","DTSTAMP:"+stamp(new Date()),"DTSTART:"+stamp(start),"DTEND:"+stamp(end),"SUMMARY:"+safe,"BEGIN:VALARM","TRIGGER:-PT0M","ACTION:DISPLAY","DESCRIPTION:"+safe,"END:VALARM","END:VEVENT","END:VCALENDAR"].join("\r\n");
+        const url = URL.createObjectURL(new Blob([ics], { type:"text/calendar;charset=utf-8" })), link = document.createElement("a"); link.href = url; link.download = item.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase() + ".ics"; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+      function render() {
+        const items = live(); count.textContent = items.filter(item => !item.firedAt).length || ""; list.replaceChildren();
+        if (!items.length) list.append(el("li", "empty", cfg.empty));
+        items.forEach(item => { const li = el("li", "alarm-card" + (item.firedAt ? " fired" : "")); li.append(el("strong", null, item.name)); const time = el("time", null, new Date(item.at).toLocaleString(undefined, { dateStyle:"medium", timeStyle:"short" })); time.dateTime = item.at; li.append(time); const row = el("div", "alarm-actions"), cal = el("button", "rm", "Add to phone calendar"), remove = el("button", "rm danger", "Delete"); cal.type = remove.type = "button"; cal.onclick = () => calendar(item); remove.onclick = () => { item.deleted = true; item.updated = now(); changed(); }; row.append(cal, remove); li.append(row); list.append(li); fire(item); });
+      }
+      form.onsubmit = event => { event.preventDefault(); const value = name.value.trim(); if (!value || !at.value) return; data.sections.alarms.push({ id:"alarm-"+now()+Math.random().toString(36).slice(2,6), name:value, at:new Date(at.value).toISOString(), created:now(), updated:now(), firedAt:null }); name.value = ""; resetDate(); changed(); };
+      enable.onclick = async () => { if (!("Notification" in window)) { alert("Web notifications are not supported here. Use Add to phone calendar instead."); return; } const permission = await Notification.requestPermission(); enable.textContent = permission === "granted" ? "Web notifications enabled" : "Notifications not enabled"; };
+      const sec = { render, close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } };
+      btn.onclick = () => { const opening = panel.hidden; all.forEach(section => section.close()); if (opening) { panel.hidden = false; btn.setAttribute("aria-expanded", "true"); } };
+      setInterval(() => live().forEach(fire), 15000); return sec;
+    }
+    SECTIONS.forEach(c => all.push(c.alarm ? makeAlarmSection(c) : makeSection(c)));
 
     // ---------- Daxton's Portfolio: looks like the other pills, tapping goes straight to Daxton's Way ----------
     const pf = el("a", "pill");
