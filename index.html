@@ -82,6 +82,31 @@
     .meta .over { color:#ff8a7a; }
     .rm { border:0; background:none; color:var(--dim); font:inherit; font-size:12px; cursor:pointer; padding:0; text-decoration:underline; }
     [hidden] { display:none !important; }
+    .cmp-page { position:fixed; inset:0; z-index:30; background:#0b0b0b; display:flex; flex-direction:column; }
+    body.cmp-on { overflow:hidden; }
+    .cmp-bar { flex:none; display:flex; align-items:center; gap:8px; padding:calc(8px + env(safe-area-inset-top)) 12px 8px; border-bottom:1px solid rgba(244,241,234,.12); }
+    .cmp-back { font:inherit; font-size:15px; font-weight:600; color:var(--ink); background:none; border:0; padding:8px 6px; cursor:pointer; }
+    .cmp-title { flex:1; text-align:center; font-size:12px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--dim); }
+    .cmp-sp { width:60px; }
+    .cmp-tabs { flex:none; display:flex; gap:6px; padding:10px 12px 0; }
+    .cmp-tab { flex:1; font:inherit; font-size:14px; font-weight:600; color:var(--dim); background:rgba(244,241,234,.06); border:1px solid rgba(244,241,234,.16); border-radius:999px; padding:8px 0; cursor:pointer; }
+    .cmp-tab[aria-selected="true"] { color:#0b0b0b; background:var(--ink); border-color:var(--ink); }
+    .cmp-cols { flex:1; min-height:0; display:flex; gap:12px; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); }
+    .cmp-col { flex:1; min-width:0; display:none; flex-direction:column; gap:8px; }
+    .cmp-col.on { display:flex; }
+    .cmp-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .cmp-h { display:flex; flex-direction:column; }
+    .cmp-h b { font-size:16px; } .cmp-h span { font-size:12px; color:var(--dim); }
+    .cmp-open { font-size:13px; font-weight:600; color:var(--ink); text-decoration:none; border:1px solid rgba(244,241,234,.25); border-radius:999px; padding:6px 12px; }
+    .cmp-log { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--dim); }
+    .cmp-log li::before { content:"• "; }
+    .cmp-log .cmp-muted::before { content:""; }
+    .cmp-frame { flex:1; min-height:0; width:100%; border:1px solid rgba(244,241,234,.16); border-radius:18px; background:#0b0b0b; }
+    @media (min-width:900px) {
+      .cmp-tabs { display:none; }
+      .cmp-col { display:flex; }
+      .cmp-frame { max-width:430px; align-self:center; }
+    }
     .note .when { flex:none; align-self:center; font-size:12px; color:var(--dim); white-space:nowrap; font-variant-numeric:tabular-nums; }
     .datebar { display:flex; align-items:center; gap:8px; margin:6px 4px 0; font-size:12px; color:var(--dim); }
     .datebar input { font:inherit; font-size:14px; color:var(--ink); background:rgba(244,241,234,.08); border:1px solid rgba(244,241,234,.16);
@@ -171,6 +196,15 @@
     .sheet-msg:empty { display:none; }
     .sheet-actions { display:flex; flex-wrap:wrap; gap:16px; }
   </style>
+  <section class="cmp-page" id="cmpPage" hidden aria-label="Compare versions">
+    <div class="cmp-bar">
+      <button class="cmp-back" id="cmpBack" type="button">‹ Back</button>
+      <span class="cmp-title">Compare versions</span>
+      <span class="cmp-sp"></span>
+    </div>
+    <div class="cmp-tabs" role="tablist" id="cmpTabs"></div>
+    <div class="cmp-cols" id="cmpCols"></div>
+  </section>
   <section class="rel" id="rel">
     <div class="pills" id="pills"></div>
     <div id="panels"></div>
@@ -668,6 +702,64 @@
       const sec = { render(){}, close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } };
       btn.onclick = () => { const opening = panel.hidden; all.forEach(o => o.close()); if (opening) { panel.hidden = false; btn.setAttribute("aria-expanded", "true"); } };
       all.push(sec);
+    })();
+    // ---------- Compare versions: Main, Testing and Beta side by side (tabs on a phone) ----------
+    (() => {
+      const V = [
+        { key:"main",    name:"Main",    sub:"Live app on your phone",   path:"../main/" },
+        { key:"testing", name:"Testing", sub:"Changes waiting for your OK", path:"../testing/" },
+        { key:"Beta",    name:"Beta",    sub:"Experimental ideas",        path:"../Beta/" }
+      ];
+      const btn = el("button", "pill"); btn.type = "button";
+      btn.append(document.createTextNode("Compare versions "));
+      btn.insertAdjacentHTML("beforeend", '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>');
+      (document.getElementById("linkPills") || pillsBox).append(btn);
+      const page = $("cmpPage"), tabs = $("cmpTabs"), cols = $("cmpCols");
+      let built = false, active = "main";
+      // Pull the newest few changelog entries for a version: "v26: Lessons pill" and when
+      async function recent(path) {
+        try {
+          const r = await fetch(path + "CHANGELOG.md?t=" + Date.now(), { cache:"no-store" }); if (!r.ok) throw 0;
+          const lines = (await r.text()).split("\n").filter(l => l.startsWith("- **")).slice(0, 4);
+          return lines.map(l => { const m = l.match(/^- \*\*(.+?)\*\*/); return m ? m[1].replace(/ CT — /, " · ") : l; });
+        } catch (e) { return null; }
+      }
+      function show(k) {
+        active = k;
+        tabs.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", b.dataset.k === k));
+        cols.querySelectorAll(".cmp-col").forEach(c => c.classList.toggle("on", c.dataset.k === k));
+      }
+      function build() {
+        built = true;
+        V.forEach(v => {
+          const t = el("button", "cmp-tab", v.name); t.type = "button"; t.dataset.k = v.key; t.setAttribute("role", "tab");
+          t.onclick = () => show(v.key); tabs.append(t);
+          const c = el("div", "cmp-col"); c.dataset.k = v.key;
+          const head = el("div", "cmp-head");
+          const h = el("div", "cmp-h"); h.append(el("b", null, v.name), el("span", null, v.sub));
+          const open = el("a", "cmp-open", "Open"); open.href = v.path;
+          head.append(h, open);
+          const ul = el("ul", "cmp-log"); ul.append(el("li", "cmp-muted", "Loading recent changes…"));
+          const frame = el("iframe", "cmp-frame"); frame.title = v.name + " version"; frame.loading = "lazy"; frame.src = v.path;
+          c.append(head, ul, frame); cols.append(c);
+          recent(v.path).then(items => { ul.replaceChildren(...(items && items.length ? items : ["No change history yet"]).map(x => el("li", null, x))); });
+        });
+        show(active);
+      }
+      function openCmp(push = true) {
+        all.forEach(o => o.close());
+        if (!built) build();
+        page.hidden = false; document.body.classList.add("cmp-on");
+        if (push) try { history.pushState({ cmp:1 }, "", "#compare"); } catch (e) {}
+      }
+      function closeCmp(pop = false) {
+        page.hidden = true; document.body.classList.remove("cmp-on");
+        if (!pop && location.hash === "#compare") try { history.back(); } catch (e) {}
+      }
+      btn.onclick = () => openCmp();
+      $("cmpBack").onclick = () => closeCmp();
+      addEventListener("popstate", () => { if (location.hash === "#compare") openCmp(false); else if (!page.hidden) closeCmp(true); });
+      if (location.hash === "#compare") openCmp(false);
     })();
     function renderAll() { all.forEach(s => s.render()); }
     renderAll();
