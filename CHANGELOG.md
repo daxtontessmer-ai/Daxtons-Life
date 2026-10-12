@@ -2,6 +2,11 @@
 
 Every commit gets a summary and timestamp here (Central Time). Newest first.
 
+## 2026-10-12
+
+- **12:08 PM CT — v26: Lessons pill** (Claude, `main`)
+  New "Lessons" pill next to Crazy IdEaS, working the same way: each lesson is its own pill, no word limit, hold one to edit or delete it. Lessons sync across your devices like everything else.
+
 ## 2026-10-11
 
 - **1:08 AM CT — v25: Links section** (Claude, `testing` branch)
