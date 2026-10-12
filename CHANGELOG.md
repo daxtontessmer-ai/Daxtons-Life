@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-12
 
+- **5:45 PM CT — v39: Life, Links and Proyectos** (Claude, `testing` branch)
+  The home screen now has three labeled parts, each separated by the same thin line: "Life" (your own pills), "Links" (Portfolio, Compare versions) and a new "Proyectos" section holding Alarms, Photo editor and Shot List. Not on `main` yet.
+
 - **5:40 PM CT — v38: Photo editor link** (Claude, `testing` branch)
   New "Photo editor" pill under Links opens Daxton's photo editor (styles like B&W, Golden Hour and Film, people cutouts and stickers, all done on the phone). It has a "‹ Daxton's Life" link to get back. Not on `main` yet.
 
