@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-12
 
+- **3:30 PM CT — v28: Compare versions** (Claude, `main`)
+  New "Compare versions" pill. It opens a page inside the app showing Main, Testing and Beta, each with its four newest changes and a live, usable preview. On a phone you switch between them with tabs; on a wide screen all three sit side by side. "Open" goes to that version full screen, and "‹ Back" returns to your app.
+
 - **12:08 PM CT — v26: Lessons pill** (Claude, `main`)
   New "Lessons" pill next to Crazy IdEaS, working the same way: each lesson is its own pill, no word limit, hold one to edit or delete it. Lessons sync across your devices like everything else.
 
