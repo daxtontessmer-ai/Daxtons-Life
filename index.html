@@ -827,6 +827,7 @@
       const pushNote = el("p", "push-note"); setup.before(pushNote);
       const ios = /iPhone|iPad/.test(navigator.userAgent), home = navigator.standalone || matchMedia("(display-mode: standalone)").matches;
       async function showPush() {
+        if (!/iPhone/.test(navigator.userAgent)) { enable.hidden = true; pushNote.textContent = "Lock-screen alarms are set up on your iPhone (open Daxton’s Life there from the Home Screen)."; return; }   // iPhone only
         const st = await pushState().catch(() => "off");
         enable.hidden = st === "on";
         pushNote.innerHTML = st === "on" ? "✅ <b>Lock-screen alarms are on for this " + deviceName() + ".</b> Alarms buzz with the app closed and repeat every minute until you tap Turn off or Snooze."

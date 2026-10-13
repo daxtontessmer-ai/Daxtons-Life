@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-12
 
+- **7:15 PM CT — lock-screen alarm sender + iPhone only** (Claude)
+  Added the GitHub job that sends alarms to the iPhone's lock screen at the alarm time and repeats every minute until Turn off or Snooze (on `main`, since scheduled jobs only run from there; it doesn't change the main app). It starts working once the `DATA_TOKEN` secret is added. On `testing`, the "Turn on lock-screen alarms" button now only appears on iPhone.
+
 - **5:45 PM CT — v39: Life, Links and Proyectos** (Claude, `testing` branch)
   The home screen now has three labeled parts, each separated by the same thin line: "Life" (your own pills), "Links" (Portfolio, Compare versions) and a new "Proyectos" section holding Alarms, Photo editor and Shot List. Not on `main` yet.
 
