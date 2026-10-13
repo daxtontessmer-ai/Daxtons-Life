@@ -1,0 +1,40 @@
+# Lock-screen alarms for Daxton's Life: one run at a time, each watching for ~55 min.
+# Needs the repo secret DATA_TOKEN (the Daxton's Life sync code). Without it, runs just skip.
+name: Alarm push
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+concurrency:
+  group: alarm-push
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 62
+    env:
+      DATA_TOKEN: ${{ secrets.DATA_TOKEN }}
+    steps:
+      - name: Waiting for DATA_TOKEN secret
+        if: env.DATA_TOKEN == ''
+        run: echo "Add the DATA_TOKEN secret to turn on lock-screen alarms."
+      - uses: actions/checkout@v4
+        if: env.DATA_TOKEN != ''
+        with:
+          ref: main
+          sparse-checkout: .github/alarm-push
+      - uses: actions/checkout@v4
+        if: env.DATA_TOKEN != ''
+        with:
+          repository: daxtontessmer-ai/daxtons-life-data
+          token: ${{ secrets.DATA_TOKEN }}
+          path: data
+      - if: env.DATA_TOKEN != ''
+        run: npm install --prefix .github/alarm-push web-push@3.6.7 --no-audit --no-fund --silent
+      - if: env.DATA_TOKEN != ''
+        run: node .github/alarm-push/send.mjs
+        env:
+          DATA_DIR: data
+          RUN_MINUTES: "55"
