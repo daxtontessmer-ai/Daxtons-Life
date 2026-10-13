@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-12
 
+- **8:55 PM CT — v42: home screen scrolls** (Claude, `testing` branch)
+  The Life, Links and Proyectos list now scrolls as one page, so with a big pill open (like App Roadmap) you can still scroll down to Proyectos. You can also scroll the last pills up above the "Hello Daxton" text so they're easy to read. Not on `main` yet.
+
 - **8:50 PM CT — v41: Prayers pill + dates everywhere** (Claude, `testing` branch)
   New "Prayers" pill in Life, formatted like Live by and Lessons. Tap a prayer to count one time prayed (the 🙏 number goes up and it shows when you last prayed). Hold one to rename, change its date, undo the last tap, or delete it. Every non-link pill now has dates: Live by, Crazy IdEaS, Lessons and Prayers entries show the day they were added (changeable when you hold to edit), and notes in Just dos, Work and School get a date like Relationships notes. Not on `main` yet.
 

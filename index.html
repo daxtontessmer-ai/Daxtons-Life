@@ -46,8 +46,9 @@
   <div class="hero"><img src="img/daxton.jpg" fetchpriority="high" decoding="async" alt="Daxton leaning on an ATV, covered in mud"></div>
   <div class="top"><span>Daxton's Life</span><span id="day"></span></div>
 <style>
-    .rel { position:fixed; z-index:3; left:0; right:0; top:calc(44px + env(safe-area-inset-top));
-           padding:0 16px; max-width:640px; margin:0 auto; animation:rise .5s 0s cubic-bezier(.2,.7,.2,1) both; }
+    .rel { position:fixed; z-index:3; left:0; right:0; top:calc(44px + env(safe-area-inset-top)); bottom:0;
+           overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
+           padding:0 16px calc(40px + env(safe-area-inset-bottom)); max-width:640px; margin:0 auto; animation:rise .5s 0s cubic-bezier(.2,.7,.2,1) both; }
     .pill { display:inline-flex; align-items:center; gap:8px; font:inherit; font-size:14px; font-weight:600;
             color:var(--ink); background:rgba(20,20,20,.55); border:1px solid rgba(244,241,234,.22);
             border-radius:999px; padding:9px 16px; cursor:pointer; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
@@ -59,8 +60,7 @@
     .chev { width:10px; height:10px; transition:transform .2s; }
     [aria-expanded="true"] > .chev { transform:rotate(180deg); }
     .panel { margin-top:10px; background:rgba(16,16,16,.78); border:1px solid rgba(244,241,234,.14); border-radius:20px;
-             padding:12px 12px calc(16px + env(safe-area-inset-bottom)); max-height:calc(100dvh - 200px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow-y:auto;
-             -webkit-overflow-scrolling:touch; scroll-padding-bottom:24px;
+             padding:12px 12px calc(16px + env(safe-area-inset-bottom)); overflow:visible;
              -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); overscroll-behavior:contain; }
     .row { display:flex; gap:8px; }
     .row input { flex:1; min-width:0; font:inherit; font-size:16px; color:var(--ink); background:rgba(244,241,234,.08);
@@ -951,13 +951,16 @@
     function fitPanels() {
       const vh = (window.visualViewport ? window.visualViewport.height : innerHeight);
       document.querySelectorAll(".rel .panel").forEach(pn => {
-        if (pn.hidden) return;
-        const top = pn.getBoundingClientRect().top;
-        pn.style.maxHeight = Math.max(180, Math.floor(vh - top - 12)) + "px";
+        pn.style.maxHeight = "";   // the whole list scrolls now, so panels never get cut off
+      });
+      // Leave room at the bottom so the last pills can scroll up above the "Hello Daxton" text
+      const m = document.querySelector("main");
+      if (m) $("rel").style.paddingBottom = Math.ceil(m.getBoundingClientRect().height + 16) + "px";
+      [].forEach(() => {
       });
     }
     document.addEventListener("click", () => requestAnimationFrame(fitPanels));
-    addEventListener("resize", fitPanels);
+    addEventListener("resize", fitPanels); requestAnimationFrame(fitPanels); setTimeout(fitPanels, 700);
     if (window.visualViewport) visualViewport.addEventListener("resize", fitPanels);
     new MutationObserver(() => requestAnimationFrame(fitPanels)).observe($("rel"), { subtree:true, attributes:true, attributeFilter:["hidden"], childList:true });
 
