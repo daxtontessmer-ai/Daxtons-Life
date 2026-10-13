@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-12
 
+- **9:10 PM CT — v44: Save to Photos in the photo editor** (Claude, `testing` branch)
+  Each edited photo has a "Save to Photos" button, and the top bar has "Save N to Photos" for all of them at once. It opens the iPhone share menu with the finished photo(s); tap "Save Image" (or "Save N Images") and they go straight into Apple Photos. If a big photo takes a moment to get ready, the button turns green ("Ready — tap to save") and one more tap opens the menu. Download still works and still goes to Files. Replaces the old "Share / Save" button.
+
 - **9:05 PM CT — v43: swipe left to delete** (Claude, `testing` branch)
   Inside every Life pill, drag an item right to left and a red ✕ slides out; tap it to delete that item. Works on people in Relationships, items in Just dos, Work and School, and entries in Live by, Crazy IdEaS, Lessons and Prayers. Tapping anywhere else (or swiping back right) closes it, and a swipe never counts as a tap, so it won't open an item or count a prayer. Hold to edit still works. Not on `main` yet.
 

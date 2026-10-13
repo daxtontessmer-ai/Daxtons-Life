@@ -39,6 +39,7 @@
 #pe-app select,#pe-app button{font:inherit;color:var(--txt);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-height:40px}
 #pe-app button{cursor:pointer}
 #pe-app button.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+#pe-app button.ready{background:#2f9e5b;border-color:#2f9e5b;color:#fff;font-weight:700}
 #pe-app button:disabled{opacity:.5}
 #pe-app .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
 #pe-app .card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
@@ -77,6 +78,7 @@
   <div class="bar">
     <select id="pe-all"></select>
     <button id="pe-apply-all">Apply to all</button>
+    <button id="pe-ph-all" class="pri" disabled hidden>Save all to Photos</button>
     <button id="pe-dl-all" class="pri" disabled>Download all</button>
     <button id="pe-clear">Clear</button>
     <span class="small" id="pe-status"></span>
@@ -286,7 +288,7 @@ async function addFiles(files){
     try{const bmp=await createImageBitmap(f,{imageOrientation:'from-image'});addItem(bmp,f.name)}
     catch(e){status.textContent=`Couldn't open ${f.name} (format not supported by this browser).`}
   }
-  $('#pe-dl-all').disabled=!items.length;
+  setAllBtns();
 }
 function addItem(bmp,name){
   const it={bmp,name,preset:$('#pe-all').value,intensity:1,showBefore:false,full:null,preview:drawScaled(bmp,PREVIEW_MAX)};
@@ -294,7 +296,7 @@ function addItem(bmp,name){
   el.innerHTML=`<div class="view"><span class="tag">After · hold to compare</span><div class="busy">Processing…</div></div>
    <div class="ctl"><div class="strip"></div><div class="row"><select>${optHTML}</select></div>
    <div class="row"><span class="small">Intensity</span><input type="range" min="0" max="100" value="100"></div>
-   <div class="row"><button class="ba">Before / After</button><button class="dl pri">Download</button><button class="cp" hidden>Copy</button><button class="sh" hidden>Share / Save</button><button class="rm">✕</button></div>
+   <div class="row"><button class="ba">Before / After</button><button class="ph pri" hidden>Save to Photos</button><button class="dl pri">Download</button><button class="cp" hidden>Copy</button><button class="rm">✕</button></div>
    <div class="err"></div><div class="small">${name}</div></div>`;
   it.el=el;const sel=el.querySelector('select');sel.value=it.preset;
   sel.onchange=()=>{it.preset=sel.value;update(it)};
@@ -307,8 +309,9 @@ function addItem(bmp,name){
   view.addEventListener('contextmenu',e=>e.preventDefault());
   el.querySelector('.dl').onclick=()=>download(it);
   el.querySelector('.cp').onclick=()=>copy(it);
-  const shb=el.querySelector('.sh');shb.hidden=!canShareFiles;shb.onclick=()=>share(it);
-  el.querySelector('.rm').onclick=()=>{items.splice(items.indexOf(it),1);el.remove();it.bmp.close?.();$('#pe-dl-all').disabled=!items.length};
+  const phb=el.querySelector('.ph');phb.hidden=!canShareFiles;phb.onclick=()=>saveToPhotos(it);
+  if(canShareFiles)el.querySelector('.dl').classList.remove('pri'); // on iPhone, Photos is the main way to save
+  el.querySelector('.rm').onclick=()=>{items.splice(items.indexOf(it),1);el.remove();it.bmp.close?.();setAllBtns()};
   grid.appendChild(el);items.push(it);update(it);
 }
 const canShareFiles=!!(navigator.canShare&&navigator.canShare({files:[new File([new Blob(['x'],{type:'image/png'})],'t.png',{type:'image/png'})]}));
@@ -322,13 +325,54 @@ async function buildStrip(it){ // tap-to-pick thumbnails of every style
   }
 }
 function markStrip(it){it.el.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.k===it.preset))}
-async function share(it){const err=it.el.querySelector('.err');
-  try{const c=await fullRes(it),png=isPng(it),f=new File([await toBlob(c,png?'image/png':'image/jpeg')],fname(it),{type:png?'image/png':'image/jpeg'});
-    await navigator.share({files:[f]})}catch(e){if(e.name!=='AbortError')err.textContent='Share failed ('+e.message+') — use Download instead.'}}
+/* ---------- Save to Photos ----------
+   Websites can't write to the Photos library directly; iPhone's share sheet can.
+   We open it with the finished photo(s) and its top choice is "Save Image" / "Save N Images".
+   If rendering took long enough that iPhone no longer counts it as your tap, the button
+   switches to "Tap to save" with the photo ready, and the next tap opens the sheet instantly. */
+const PH_TIP='In the menu that opens, tap “Save Image” — it goes straight to your Photos.';
+function setAllBtns(){const n=items.length;$('#pe-dl-all').disabled=!n;const a=$('#pe-ph-all');a.hidden=!canShareFiles;a.disabled=!n;
+  a.textContent=n>1?`Save ${n} to Photos`:'Save all to Photos';allReady=null}
+async function photoFile(it){
+  if(it.file&&it.full)return it.file;
+  const c=await fullRes(it),png=isPng(it);
+  return it.file=new File([await toBlob(c,png?'image/png':'image/jpeg')],fname(it),{type:png?'image/png':'image/jpeg'});
+}
+async function openSheet(files,btn,readyLabel,reset){
+  try{await navigator.share({files});reset();return 'ok'}
+  catch(e){
+    if(e.name==='AbortError'){reset();return 'cancel'}
+    if(e.name==='NotAllowedError'){btn.textContent=readyLabel;btn.classList.add('ready');return 'tap'}
+    reset();throw e}
+}
+async function saveToPhotos(it){
+  const err=it.el.querySelector('.err'),btn=it.el.querySelector('.ph');err.textContent='';
+  const reset=()=>{btn.textContent='Save to Photos';btn.classList.remove('ready')};
+  try{
+    if(!btn.classList.contains('ready'))btn.textContent='Getting it ready…';
+    const f=await photoFile(it);status.textContent=PH_TIP;
+    const r=await openSheet([f],btn,'Ready — tap to save',reset);
+    if(r==='ok')status.textContent='Done ✓ — if you tapped “Save Image”, it’s in Photos';
+  }catch(e){err.textContent='Couldn’t open Save to Photos ('+e.message+') — use Download instead.'}
+}
+let allReady=null;
+$('#pe-ph-all').onclick=async()=>{
+  const btn=$('#pe-ph-all'),n=items.length,reset=()=>{btn.classList.remove('ready');setAllBtns()};
+  try{
+    if(!allReady||allReady.length!==n){btn.disabled=true;allReady=[];
+      for(const [i,it] of items.entries()){status.textContent=`Getting photos ready ${i+1}/${n}…`;allReady.push(await photoFile(it))}
+      btn.disabled=false}
+    if(!canShareFiles||!navigator.canShare({files:allReady}))throw new Error('this phone can’t save that many at once');
+    status.textContent=PH_TIP.replace('“Save Image”',n>1?`“Save ${n} Images”`:'“Save Image”');
+    const files=allReady,r=await openSheet(files,btn,`Ready — tap to save ${n} to Photos`,reset);
+    if(r==='ok'){status.textContent=`Done ✓ — if you tapped “Save ${n>1?n+' Images':'Image'}”, they’re in Photos`;allReady=null}
+  }catch(e){btn.disabled=false;status.textContent='Save to Photos failed: '+e.message+' — try one photo at a time or use Download all.'}
+};
 function show(it){const v=it.el.querySelector('.view');v.querySelector('canvas')?.remove();
   v.prepend(it.showBefore?it.preview:it.out||it.preview);v.querySelector('.tag').textContent=it.showBefore?'Before':'After · hold to compare'}
 async function update(it){
-  const id=(it.job=(it.job||0)+1),err=it.el.querySelector('.err');err.textContent='';it.full=null;
+  const id=(it.job=(it.job||0)+1),err=it.el.querySelector('.err');err.textContent='';it.full=null;it.file=null;allReady=null;
+  {const b=it.el.querySelector('.ph');b.textContent='Save to Photos';b.classList.remove('ready')}
   it.el.classList.add('working');markStrip(it);
   it.el.querySelector('.busy').textContent=isPng(it)?'Loading people-detection model… (first time takes a few seconds)':'Processing…';
   it.el.querySelector('.cp').hidden=!isPng(it);
@@ -349,13 +393,13 @@ async function copy(it){const err=it.el.querySelector('.err');
     await navigator.clipboard.write([new ClipboardItem({'image/png':toBlob(c,'image/png')})]);err.textContent='';status.textContent=(PRESETS[it.preset].sticker?'Sticker':'Cutout')+' copied ✓ — paste into Messages, Notes, etc.'}
   catch(e){err.textContent='Copy failed ('+e.message+') — use Download instead.'}}
 $('#pe-apply-all').onclick=()=>{for(const it of items){it.preset=$('#pe-all').value;it.el.querySelector('select').value=it.preset;update(it)}};
-$('#pe-clear').onclick=()=>{items.forEach(it=>it.bmp.close?.());items.length=0;grid.innerHTML='';$('#pe-dl-all').disabled=true;status.textContent=''};
+$('#pe-clear').onclick=()=>{items.forEach(it=>it.bmp.close?.());items.length=0;grid.innerHTML='';setAllBtns();status.textContent=''};
 $('#pe-dl-all').onclick=async()=>{
   const btn=$('#pe-dl-all');btn.disabled=true;
   try{
     let JSZip=null;try{JSZip=(await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm')).default}catch(e){}
     if(JSZip){const z=new JSZip();for(const [i,it] of items.entries()){status.textContent=`Rendering ${i+1}/${items.length}…`;
-        z.file(fname(it),await toBlob(await fullRes(it),isPng(it)?'image/png':'image/jpeg'));if(items.length>3){it.full.width=0;it.full=null}} // free memory on phones
+        z.file(fname(it),await toBlob(await fullRes(it),isPng(it)?'image/png':'image/jpeg'));if(items.length>3){it.full.width=0;it.full=null;it.file=null}} // free memory on phones
       saveBlob(await z.generateAsync({type:'blob'}),'edited-photos.zip')}
     else for(const it of items){await download(it);await new Promise(r=>setTimeout(r,400))}
     status.textContent='Done ✓';
@@ -365,6 +409,7 @@ const drop=$('#pe-drop');$('#pe-file').onchange=e=>{addFiles(e.target.files);e.t
 ['dragenter','dragover'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('over')}));
 ['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('over')}));
 drop.addEventListener('drop',e=>addFiles(e.dataTransfer.files));
+setAllBtns();if(canShareFiles)$('#pe-dl-all').classList.remove('pri');
 </script>
 </body>
 </html>
