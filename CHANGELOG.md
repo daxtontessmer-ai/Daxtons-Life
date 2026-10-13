@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-12
 
+- **9:05 PM CT — v43: swipe left to delete** (Claude, `testing` branch)
+  Inside every Life pill, drag an item right to left and a red ✕ slides out; tap it to delete that item. Works on people in Relationships, items in Just dos, Work and School, and entries in Live by, Crazy IdEaS, Lessons and Prayers. Tapping anywhere else (or swiping back right) closes it, and a swipe never counts as a tap, so it won't open an item or count a prayer. Hold to edit still works. Not on `main` yet.
+
 - **8:55 PM CT — v42: home screen scrolls** (Claude, `testing` branch)
   The Life, Links and Proyectos list now scrolls as one page, so with a big pill open (like App Roadmap) you can still scroll down to Proyectos. You can also scroll the last pills up above the "Hello Daxton" text so they're easy to read. Not on `main` yet.
 
