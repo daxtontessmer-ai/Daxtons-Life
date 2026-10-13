@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-12
 
+- **8:50 PM CT — v41: Prayers pill + dates everywhere** (Claude, `testing` branch)
+  New "Prayers" pill in Life, formatted like Live by and Lessons. Tap a prayer to count one time prayed (the 🙏 number goes up and it shows when you last prayed). Hold one to rename, change its date, undo the last tap, or delete it. Every non-link pill now has dates: Live by, Crazy IdEaS, Lessons and Prayers entries show the day they were added (changeable when you hold to edit), and notes in Just dos, Work and School get a date like Relationships notes. Not on `main` yet.
+
 - **7:15 PM CT — lock-screen alarm sender + iPhone only** (Claude)
   Added the GitHub job that sends alarms to the iPhone's lock screen at the alarm time and repeats every minute until Turn off or Snooze (on `main`, since scheduled jobs only run from there; it doesn't change the main app). It starts working once the `DATA_TOKEN` secret is added. On `testing`, the "Turn on lock-screen alarms" button now only appears on iPhone.
 

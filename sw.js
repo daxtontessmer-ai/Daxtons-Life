@@ -1,5 +1,5 @@
 // Keeps the app fast and working with no signal. Bump VERSION whenever files change.
-const VERSION = "v40";
+const VERSION = "v41";
 const FILES = ["./", "index.html", "manifest.webmanifest", "img/daxton.jpg", "img/icon-180.png"];
 
 self.addEventListener("install", e => {

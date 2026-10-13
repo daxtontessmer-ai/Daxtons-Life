@@ -226,6 +226,13 @@
     .alarm-setup a { color:var(--ink); font-weight:600; text-decoration:none; border:1px solid rgba(244,241,234,.25); border-radius:999px; padding:7px 12px; }
     @keyframes arPulse { 50% { background:rgba(60,18,10,.94); } }
     @media (prefers-reduced-motion:reduce) { .alarm-ring { animation:none; } }
+    .note.prayer { cursor:pointer; align-items:center; }
+    .note.prayer > span { display:flex; flex-direction:column; gap:2px; }
+    .pr-sub { font-size:11px; color:var(--dim); font-weight:400; }
+    .pr-count { flex:none; font-size:13px; font-weight:700; padding:5px 10px; border-radius:999px; background:rgba(244,241,234,.1); font-variant-numeric:tabular-nums; }
+    .note.prayer.bump .pr-count { animation:prBump .45s ease-out; background:rgba(127,209,139,.25); }
+    @keyframes prBump { 40% { transform:scale(1.25); } }
+    @media (prefers-reduced-motion:reduce) { .note.prayer.bump .pr-count { animation:none; } }
     .todo-row { display:flex; align-items:center; gap:8px; }
     .todo-row .pill { flex:1; min-width:0; }
     .todo-toggle { flex:none; border:1px solid rgba(244,241,234,.24); border-radius:999px; padding:7px 10px; background:rgba(244,241,234,.06); color:var(--ink); font:inherit; font-size:11px; font-weight:700; cursor:pointer; }
@@ -284,12 +291,13 @@
     // ---------- Sections: each pill works the same way ----------
     const SECTIONS = [
       { key:"rel",    title:"Relationships", dated:true, oldLs:"dl-relationships", addPh:"Add a person",           notePh:"A story, desire, or thing to remember", rmLabel:"Remove person", empty:"No one yet. Add your first person above." },
-      { key:"justdo", title:"Just dos",      oldLs:"dl-justdos",       addPh:"Add something to just do", notePh:"A detail, step, or reminder", done:true, rmLabel:"Remove",        empty:"Nothing yet. Add your first one above." },
-      { key:"work",   title:"Work",          oldLs:"dl-work",          addPh:"Add a work item",        notePh:"A task, idea, or thing to remember",    rmLabel:"Remove",        empty:"Nothing yet. Add your first work item above." },
-      { key:"school", title:"School",        oldLs:"dl-school",        addPh:"Add a class or project", notePh:"An assignment, idea, or reminder",     rmLabel:"Remove",        empty:"Nothing yet. Add your first class or project above." },
+      { key:"justdo", title:"Just dos",      dated:true, oldLs:"dl-justdos",       addPh:"Add something to just do", notePh:"A detail, step, or reminder", done:true, rmLabel:"Remove",        empty:"Nothing yet. Add your first one above." },
+      { key:"work",   title:"Work",          dated:true, oldLs:"dl-work",          addPh:"Add a work item",        notePh:"A task, idea, or thing to remember",    rmLabel:"Remove",        empty:"Nothing yet. Add your first work item above." },
+      { key:"school", title:"School",        dated:true, oldLs:"dl-school",        addPh:"Add a class or project", notePh:"An assignment, idea, or reminder",     rmLabel:"Remove",        empty:"Nothing yet. Add your first class or project above." },
       { key:"liveby", title:"Live by",       oldLs:"dl-liveby",        addPh:"Something to live by",   flat:true,                                                                empty:"Nothing yet. Add your first one above." },
       { key:"crazy",  title:"Crazy IdEaS",   oldLs:"dl-crazyideas",    addPh:"Add a crazy idea",       flat:true,                                                                empty:"No crazy ideas yet. Add your first one above." },
       { key:"lessons", title:"Lessons",      oldLs:"dl-lessons",       addPh:"Add a lesson",           flat:true,                                                                empty:"No lessons yet. Add your first one above." },
+      { key:"prayers", title:"Prayers",      oldLs:"dl-prayers",       addPh:"Add a prayer",           flat:true, prayer:true,                                                   empty:"No prayers yet. Add your first one above." },
       { key:"path",   title:"App Roadmap",   oldLs:"dl-path",          addPh:"Add a step",             flat:true, steps:true,                                                    empty:"No steps yet. Add your first one above." },
       { key:"alarms", title:"Alarms",        oldLs:"dl-alarms",        alarm:true,                                                                     empty:"No alarms scheduled yet." }
     ];
@@ -300,6 +308,13 @@
     const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
     const $ = id => document.getElementById(id);
     const now = () => Date.now();
+    const isoOf = d => new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+    const todayISO = () => isoOf(new Date());
+    const fmtDate = iso => { const [y, m, d] = iso.split("-").map(Number); const dt = new Date(y, m - 1, d);
+      return dt.toLocaleDateString(undefined, { month:"short", day:"numeric", ...(y !== new Date().getFullYear() ? { year:"numeric" } : {}) }); };
+    const dateField = (value, label) => { const w = el("label", "datebar"), i = el("input"); i.type = "date"; i.value = value || ""; i.max = todayISO();
+      w.append(el("span", null, label), i); return [w, i]; };
+    const entryDate = it => it.date || (it.created > 1e11 ? isoOf(new Date(it.created)) : "");   // flat entries: chosen date, else the day it was added
 
     // ---------- Local store (one object for all sections) ----------
     const empty = () => ({ version:1, sections:Object.fromEntries(SECTIONS.map(c => [c.key, []])) });
@@ -456,14 +471,15 @@
       panel.append(form, list);
       let roadmapSummary = null, roadmapFill = null, roadmapNext = null, roadmapCurrent = null, roadmapView = null, roadmapHideDone = false;
       // "Flat" pills (Live by): each entry is its own pill, no second layer underneath
-      let flatMeta = null;
+      let flatMeta = null, flatDate = null, flatDateRow = null, bumpId = null;
       if (cfg.flat) {
         list.className = "flat";
         input.removeAttribute("maxlength");
-        flatMeta = el("div", "meta"); const fc = el("span"); flatMeta.append(fc, el("span", "hint", "Hold to edit or delete"));
+        flatMeta = el("div", "meta"); const fc = el("span"); flatMeta.append(fc, el("span", "hint", cfg.prayer ? "Tap a prayer to count it · hold to edit" : "Hold to edit or delete"));
         const upd = () => { const w = words(input.value); fc.textContent = ""; addBtn.disabled = !w || w > MAX; };
         input.oninput = upd; upd(); sec_upd = upd;
         form.after(flatMeta);
+        if (!cfg.steps) { [flatDateRow, flatDate] = dateField(todayISO(), "Date"); form.after(flatDateRow); }
       }
       if (cfg.steps) {
         list.className = "steps";
@@ -517,7 +533,10 @@
         if (cfg.flat && words(v) > MAX) return;
         input.value = ""; if (sec_upd) sec_upd();
         const id = cfg.key + now() + Math.random().toString(36).slice(2, 6);
-        list_().push({ id, name: v, created: now(), updated: now(), notes: [], done:false });
+        const entry = { id, name: v, created: now(), updated: now(), notes: [], done:false };
+        if (flatDate) { entry.date = flatDate.value || todayISO(); flatDate.value = todayISO(); }
+        if (cfg.prayer) entry.count = 0;
+        list_().push(entry);
         open.add(id); focusId = id; changed();
       };
       const setNotes = (it, notes, dates) => {
@@ -525,11 +544,6 @@
         if (cfg.dated) { const d = { ...(it.dates || {}), ...(dates || {}) }; for (const k of Object.keys(d)) if (!notes.includes(k) || !d[k]) delete d[k]; it.dates = d; }
         it.updated = now(); changed();
       };
-      const todayISO = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
-      const fmtDate = iso => { const [y, m, d] = iso.split("-").map(Number); const dt = new Date(y, m - 1, d);
-        return dt.toLocaleDateString(undefined, { month:"short", day:"numeric", ...(y !== new Date().getFullYear() ? { year:"numeric" } : {}) }); };
-      const dateField = (value, label) => { const w = el("label", "datebar"), i = el("input"); i.type = "date"; i.value = value || ""; i.max = todayISO();
-        w.append(el("span", null, label), i); return [w, i]; };
       const remove = it => {
         open.delete(it.id);
         Object.assign(it, { deleted:true, notes:[], updated:now() });
@@ -577,6 +591,15 @@
             const meta = el("div", "meta"), cnt = el("span"), links = el("span", "links");
             const cancel = el("button", "rm", "Cancel"), del = el("button", "rm", "Delete");
             cancel.type = del.type = "button";
+            let editDateRow = null, editDate = null;
+            if (!cfg.steps) { [editDateRow, editDate] = dateField(editing.date ?? entryDate(it), "Date"); editDate.oninput = () => { editing.date = editDate.value; }; }
+            let prayRow = null;
+            if (cfg.prayer) {
+              prayRow = el("div", "meta"); const c = it.count || 0;
+              prayRow.append(el("span", null, "Prayed " + c + (c === 1 ? " time" : " times")));
+              if (c) { const undo = el("button", "rm", "Undo last tap"); undo.type = "button";
+                undo.onclick = () => { it.count = Math.max(0, (it.count || 0) - 1); it.updated = now(); changed(); }; prayRow.append(undo); }
+            }
             const upd = () => { const w = words(inp.value); cnt.textContent = ""; save.disabled = !w || w > MAX; };
             inp.oninput = () => { editing.text = inp.value; upd(); }; if (promptEdit) promptEdit.oninput = () => { editing.prompt = promptEdit.value; }; upd();
             inp.onkeydown = e => { if (e.key === "Escape") { editing = null; render(); } };
@@ -586,10 +609,10 @@
               e.preventDefault();
               const v = inp.value.trim().replace(/\s+/g, " ");
               if (!v || words(v) > MAX) return;
-              it.name = v; if (promptEdit) it.prompt = promptEdit.value.trim(); editing = null; it.updated = now(); changed();
+              it.name = v; if (promptEdit) it.prompt = promptEdit.value.trim(); if (editDate) it.date = editDate.value || entryDate(it); editing = null; it.updated = now(); changed();
             };
             f.append(inp, save); links.append(cancel, del); meta.append(cnt, links);
-            n.append(f); if (promptEdit) n.append(promptEdit); n.append(meta); list.append(n);
+            n.append(f); if (promptEdit) n.append(promptEdit); if (editDateRow) n.append(editDateRow); if (prayRow) n.append(prayRow); n.append(meta); list.append(n);
             setTimeout(() => { if (document.activeElement !== inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } }, 0);
             continue;
           }
@@ -626,7 +649,23 @@
             n.append(dot, main); list.append(n);
             continue;
           }
+          const day = entryDate(it);
+          if (cfg.prayer) {
+            n.classList.add("prayer"); if (bumpId === it.id) n.classList.add("bump");
+            const txt = el("span"), sub = el("small", "pr-sub");
+            txt.append(document.createTextNode(it.name), sub);
+            sub.textContent = it.lastPrayed ? "Last prayed " + fmtDate(isoOf(new Date(it.lastPrayed))) + ", " + new Date(it.lastPrayed).toLocaleTimeString([], { hour:"numeric", minute:"2-digit" }) : "Tap to pray";
+            n.append(txt);
+            if (day) { const w = el("time", "when", fmtDate(day)); w.dateTime = day; n.append(w); }
+            const c = el("b", "pr-count", "🙏 " + (it.count || 0)); c.setAttribute("aria-label", "Prayed " + (it.count || 0) + " times"); n.append(c);
+            n.setAttribute("role", "button"); n.tabIndex = 0;
+            const pray = () => { it.count = (it.count || 0) + 1; it.lastPrayed = it.updated = now(); bumpId = it.id; if (navigator.vibrate) navigator.vibrate(10); changed(); setTimeout(() => { if (bumpId === it.id) bumpId = null; }, 500); };
+            holdable(n, () => { editing = { id: it.id, text: it.name }; render(); }, pray);
+            n.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pray(); } };
+            list.append(n); continue;
+          }
           n.append(el("span", null, it.name)); n.classList.add("holdable");
+          if (day) { const w = el("time", "when", fmtDate(day)); w.dateTime = day; n.append(w); }
           holdable(n, () => { editing = { id: it.id, text: it.name }; render(); });
           list.append(n);
         }
