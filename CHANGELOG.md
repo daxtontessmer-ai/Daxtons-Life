@@ -2,6 +2,11 @@
 
 Every commit gets a summary and timestamp here (Central Time). Newest first.
 
+## 2026-10-14
+
+- **5:35 PM CT — v45: Prayers, your own pills (+), and pills inside pills** (Claude, `main`)
+  Prayers pill on main: tap a prayer to count it (🙏 count and when you last prayed it), hold to rename, undo a tap, or delete. New + pill at the end of the list makes a pill of your own, as a Simple list (like Lessons) or a List with notes (like Work); rename or delete it from the bottom of its dropdown. Hold any pill for a moment and drag it onto another pill to put it inside as a sub-category; drag it to the bar at the bottom to bring it back to the main list. Sync now keeps every section, so pills and their layout match on all devices.
+
 ## 2026-10-12
 
 - **4:45 PM CT — testing moved to `main`** (Claude)

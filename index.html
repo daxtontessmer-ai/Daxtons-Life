@@ -225,6 +225,32 @@
     .alarm-setup a { color:var(--ink); font-weight:600; text-decoration:none; border:1px solid rgba(244,241,234,.25); border-radius:999px; padding:7px 12px; }
     @keyframes arPulse { 50% { background:rgba(60,18,10,.94); } }
     @media (prefers-reduced-motion:reduce) { .alarm-ring { animation:none; } }
+    .note.prayer { cursor:pointer; align-items:center; }
+    .note.prayer > span { display:flex; flex-direction:column; gap:2px; }
+    .pr-sub { font-size:11px; color:var(--dim); font-weight:400; }
+    .pr-count { flex:none; font-size:13px; font-weight:700; padding:5px 10px; border-radius:999px; background:rgba(244,241,234,.1); font-variant-numeric:tabular-nums; }
+    .note.prayer.bump .pr-count { animation:prBump .45s ease-out; background:rgba(127,209,139,.25); }
+    @keyframes prBump { 40% { transform:scale(1.25); } }
+    @media (prefers-reduced-motion:reduce) { .note.prayer.bump .pr-count { animation:none; } }
+    /* Your own pills, pills inside pills, drag and drop */
+    .rel .pills > .pill { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+    .pill-plus { padding:9px 15px; font-size:17px; line-height:1; }
+    .sub-box { margin:0 0 12px; padding-bottom:12px; border-bottom:1px solid rgba(244,241,234,.12); }
+    .sub-box .panel { background:rgba(244,241,234,.04); }
+    .pill.dragging { opacity:.35; }
+    .pill.drop-on { border-color:#7fd18b; background:rgba(127,209,139,.25); transform:scale(1.06); }
+    .drag-ghost { position:fixed; z-index:50; pointer-events:none; transform:translate(-50%,-50%) scale(1.08); box-shadow:0 10px 30px rgba(0,0,0,.5); margin:0; }
+    .drop-top { position:fixed; z-index:49; left:16px; right:16px; bottom:calc(18px + env(safe-area-inset-bottom)); max-width:608px; margin:0 auto;
+                padding:16px; text-align:center; font-size:14px; font-weight:600; color:var(--ink); border:1.5px dashed rgba(244,241,234,.45);
+                border-radius:18px; background:rgba(16,16,16,.85); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
+    .drop-top.drop-on { border-color:#7fd18b; background:rgba(40,70,45,.9); }
+    .kind-pick { display:flex; gap:8px; margin-top:10px; }
+    .kind-pick button { flex:1; font:inherit; font-size:13px; font-weight:600; color:var(--ink); border:1px solid rgba(244,241,234,.22); border-radius:14px;
+                        padding:9px 10px; background:rgba(244,241,234,.05); cursor:pointer; text-align:left; }
+    .kind-pick button small { display:block; font-weight:400; font-size:11px; color:var(--dim); margin-top:2px; }
+    .kind-pick button[aria-pressed="true"] { border-color:var(--ink); background:rgba(244,241,234,.16); }
+    .plus-tip { font-size:12px; color:var(--dim); margin:10px 2px 0; line-height:1.4; }
+    .pill-tools { display:flex; justify-content:flex-end; gap:6px; margin-top:12px; }
     .todo-row { display:flex; align-items:center; gap:8px; }
     .todo-row .pill { flex:1; min-width:0; }
     .todo-toggle { flex:none; border:1px solid rgba(244,241,234,.24); border-radius:999px; padding:7px 10px; background:rgba(244,241,234,.06); color:var(--ink); font:inherit; font-size:11px; font-weight:700; cursor:pointer; }
@@ -283,6 +309,7 @@
       { key:"liveby", title:"Live by",       oldLs:"dl-liveby",        addPh:"Something to live by",   flat:true,                                                                empty:"Nothing yet. Add your first one above." },
       { key:"crazy",  title:"Crazy IdEaS",   oldLs:"dl-crazyideas",    addPh:"Add a crazy idea",       flat:true,                                                                empty:"No crazy ideas yet. Add your first one above." },
       { key:"lessons", title:"Lessons",      oldLs:"dl-lessons",       addPh:"Add a lesson",           flat:true,                                                                empty:"No lessons yet. Add your first one above." },
+      { key:"prayers", title:"Prayers",      oldLs:"dl-prayers",       addPh:"Add a prayer",           flat:true, prayer:true,                                                   empty:"No prayers yet. Add your first one above." },
       { key:"path",   title:"App Roadmap",   oldLs:"dl-path",          addPh:"Add a step",             flat:true, steps:true,                                                    empty:"No steps yet. Add your first one above." },
       { key:"alarms", title:"Alarms",        oldLs:"dl-alarms",        alarm:true,                                                                     empty:"No alarms scheduled yet." }
     ];
@@ -317,13 +344,16 @@
     // ---------- Merge: newest edit of each item wins; deletions are remembered ----------
     function merge(a, b) {
       const out = empty();
-      for (const c of SECTIONS) {
+      // Merge every section either side has (your own pills, the pill layout, ones only another version knows), so nothing gets erased
+      const keys = new Set([...SECTIONS.map(c => c.key), ...Object.keys((a||{}).sections||{}), ...Object.keys((b||{}).sections||{})]);
+      for (const key of keys) {
         const m = new Map();
-        for (const it of [...((a.sections||{})[c.key]||[]), ...((b.sections||{})[c.key]||[])]) {
+        for (const it of [...(((a||{}).sections||{})[key]||[]), ...(((b||{}).sections||{})[key]||[])]) {
+          if (!it || !it.id) continue;
           const cur = m.get(it.id);
           if (!cur || (it.updated||0) > (cur.updated||0)) m.set(it.id, it);
         }
-        out.sections[c.key] = [...m.values()];
+        out.sections[key] = [...m.values()];
       }
       out.devices = { ...((b||{}).devices||{}) };
       for (const [k, v] of Object.entries((a||{}).devices||{})) if (!out.devices[k] || (v.last||0) > (out.devices[k].last||0)) out.devices[k] = v;
@@ -426,11 +456,11 @@
       panel.append(form, list);
       let roadmapSummary = null, roadmapFill = null, roadmapNext = null, roadmapCurrent = null, roadmapView = null, roadmapHideDone = false;
       // "Flat" pills (Live by): each entry is its own pill, no second layer underneath
-      let flatMeta = null;
+      let flatMeta = null, bumpId = null;
       if (cfg.flat) {
         list.className = "flat";
         input.removeAttribute("maxlength");
-        flatMeta = el("div", "meta"); const fc = el("span"); flatMeta.append(fc, el("span", "hint", "Hold to edit or delete"));
+        flatMeta = el("div", "meta"); const fc = el("span"); flatMeta.append(fc, el("span", "hint", cfg.prayer ? "Tap a prayer to count it · hold to edit" : "Hold to edit or delete"));
         const upd = () => { const w = words(input.value); fc.textContent = ""; addBtn.disabled = !w || w > MAX; };
         input.oninput = upd; upd(); sec_upd = upd;
         form.after(flatMeta);
@@ -474,11 +504,16 @@
         if (added) saveLocal();
       }
       pillsBox.append(btn); panelsBox.append(panel);
+      if (cfg.custom) {   // your own pills: rename or delete from inside
+        const tools = el("div", "pill-tools"), ren = el("button", "rm", "Rename pill"), del = el("button", "rm danger", "Delete pill");
+        ren.type = del.type = "button"; tools.append(ren, del); panel.append(tools);
+        ren.onclick = () => renamePill(cfg.key); del.onclick = () => deletePill(cfg.key);
+      }
 
-      const sec = { render, close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } };
+      const sec = { key: cfg.key, btn, panel, render, close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } };
       btn.onclick = () => {
         const opening = panel.hidden;
-        all.forEach(o => o.close());
+        closeOthers(btn);
         if (opening) { panel.hidden = false; btn.setAttribute("aria-expanded", "true"); }
       };
       form.onsubmit = e => {
@@ -487,7 +522,9 @@
         if (cfg.flat && words(v) > MAX) return;
         input.value = ""; if (sec_upd) sec_upd();
         const id = cfg.key + now() + Math.random().toString(36).slice(2, 6);
-        list_().push({ id, name: v, created: now(), updated: now(), notes: [], done:false });
+        const entry = { id, name: v, created: now(), updated: now(), notes: [], done:false };
+        if (cfg.prayer) entry.count = 0;
+        list_().push(entry);
         open.add(id); focusId = id; changed();
       };
       const setNotes = (it, notes, dates) => {
@@ -547,6 +584,13 @@
             const meta = el("div", "meta"), cnt = el("span"), links = el("span", "links");
             const cancel = el("button", "rm", "Cancel"), del = el("button", "rm", "Delete");
             cancel.type = del.type = "button";
+            let prayRow = null;
+            if (cfg.prayer) {
+              prayRow = el("div", "meta"); const c = it.count || 0;
+              prayRow.append(el("span", null, "Prayed " + c + (c === 1 ? " time" : " times")));
+              if (c) { const undo = el("button", "rm", "Undo last tap"); undo.type = "button";
+                undo.onclick = () => { it.count = Math.max(0, (it.count || 0) - 1); it.updated = now(); changed(); }; prayRow.append(undo); }
+            }
             const upd = () => { const w = words(inp.value); cnt.textContent = ""; save.disabled = !w || w > MAX; };
             inp.oninput = () => { editing.text = inp.value; upd(); }; if (promptEdit) promptEdit.oninput = () => { editing.prompt = promptEdit.value; }; upd();
             inp.onkeydown = e => { if (e.key === "Escape") { editing = null; render(); } };
@@ -559,7 +603,7 @@
               it.name = v; if (promptEdit) it.prompt = promptEdit.value.trim(); editing = null; it.updated = now(); changed();
             };
             f.append(inp, save); links.append(cancel, del); meta.append(cnt, links);
-            n.append(f); if (promptEdit) n.append(promptEdit); n.append(meta); list.append(n);
+            n.append(f); if (promptEdit) n.append(promptEdit); if (prayRow) n.append(prayRow); n.append(meta); list.append(n);
             setTimeout(() => { if (document.activeElement !== inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } }, 0);
             continue;
           }
@@ -595,6 +639,19 @@
             }
             n.append(dot, main); list.append(n);
             continue;
+          }
+          if (cfg.prayer) {
+            n.classList.add("prayer"); if (bumpId === it.id) n.classList.add("bump");
+            const txt = el("span"), sub = el("small", "pr-sub");
+            txt.append(document.createTextNode(it.name), sub);
+            sub.textContent = it.lastPrayed ? "Last prayed " + new Date(it.lastPrayed).toLocaleString(undefined, { month:"short", day:"numeric", hour:"numeric", minute:"2-digit" }) : "Tap to pray";
+            n.append(txt);
+            const c = el("b", "pr-count", "🙏 " + (it.count || 0)); c.setAttribute("aria-label", "Prayed " + (it.count || 0) + " times"); n.append(c);
+            n.setAttribute("role", "button"); n.tabIndex = 0;
+            const pray = () => { it.count = (it.count || 0) + 1; it.lastPrayed = it.updated = now(); bumpId = it.id; if (navigator.vibrate) navigator.vibrate(10); changed(); setTimeout(() => { if (bumpId === it.id) bumpId = null; }, 500); };
+            holdable(n, () => { editing = { id: it.id, text: it.name }; render(); }, pray);
+            n.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pray(); } };
+            list.append(n); continue;
           }
           n.append(el("span", null, it.name)); n.classList.add("holdable");
           holdable(n, () => { editing = { id: it.id, text: it.name }; render(); });
@@ -795,8 +852,8 @@
       }
       form.onsubmit = event => { event.preventDefault(); const value = name.value.trim(); if (!value || !at.value) return; data.sections.alarms.push({ id:"alarm-"+now()+Math.random().toString(36).slice(2,6), name:value, at:new Date(at.value).toISOString(), created:now(), updated:now(), firedAt:null }); name.value = ""; resetDate(); changed(); };
       enable.onclick = async () => { if (!("Notification" in window)) { alert("Web notifications are not supported here. Use Add to phone calendar instead."); return; } const permission = await Notification.requestPermission(); enable.textContent = permission === "granted" ? "Web notifications enabled" : "Notifications not enabled"; };
-      const sec = { render, close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } };
-      btn.onclick = () => { const opening = panel.hidden; all.forEach(section => section.close()); if (opening) { panel.hidden = false; btn.setAttribute("aria-expanded", "true"); } };
+      const sec = { key: cfg.key, btn, panel, render, close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } };
+      btn.onclick = () => { const opening = panel.hidden; closeOthers(btn); if (opening) { panel.hidden = false; btn.setAttribute("aria-expanded", "true"); } };
       setInterval(() => live().forEach(fire), 5000);
       document.addEventListener("visibilitychange", () => { if (!document.hidden) live().forEach(fire); });
       addEventListener("focus", () => live().forEach(fire));
@@ -958,7 +1015,139 @@
       addEventListener("popstate", () => { if (location.hash === "#compare") openCmp(false); else if (!page.hidden) closeCmp(true); });
       if (location.hash === "#compare") openCmp(false);
     })();
-    function renderAll() { all.forEach(s => s.render()); }
+    // ---------- Your own pills (+), pills inside pills, drag and drop ----------
+    // Pill list lives in section "custompills"; where each pill sits lives in "pillnest" ({ id: pill key, parent: pill key or null }).
+    function closeOthers(btn) { all.forEach(o => { if (!o.panel || !o.panel.contains(btn)) o.close(); }); }
+    const sect = k => (data.sections[k] = data.sections[k] || []);
+    const customDefs = () => sect("custompills").filter(d => !d.deleted);
+    const nestOf = key => { const r = sect("pillnest").find(i => i.id === key); return r && r.parent || null; };
+    const descends = (k, anc) => { for (let i = 0, p = nestOf(k); p && i < 50; i++, p = nestOf(p)) if (p === anc) return true; return false; };
+    function setParent(key, parent) {
+      let r = sect("pillnest").find(i => i.id === key);
+      if (!r) { r = { id:key, created:now() }; data.sections.pillnest.push(r); }
+      r.parent = parent || null; r.updated = now(); changed();
+    }
+    const cfgFor = d => d.kind === "notes"
+      ? { key:d.id, title:d.name, custom:true, addPh:"Add an item", notePh:"A note or thing to remember", rmLabel:"Remove", empty:"Nothing yet. Add your first one above." }
+      : { key:d.id, title:d.name, custom:true, addPh:"Add to " + d.name, flat:true, empty:"Nothing yet. Add your first one above." };
+    function renamePill(key) {
+      const d = sect("custompills").find(x => x.id === key); if (!d) return;
+      const v = (prompt("Rename this pill", d.name) || "").trim().replace(/\s+/g, " ").slice(0, 40);
+      if (v && v !== d.name) { d.name = v; d.updated = now(); changed(); }
+    }
+    function deletePill(key) {
+      const d = sect("custompills").find(x => x.id === key); if (!d) return;
+      if (!confirm('Delete the "' + d.name + '" pill and everything in it?')) return;
+      const up = nestOf(key);   // pills that were inside it move up one level
+      sect("pillnest").forEach(r => { if (r.parent === key) { r.parent = up; r.updated = now(); } });
+      d.deleted = true; d.updated = now(); changed();
+    }
+    function ensureCustom() {
+      const defs = customDefs(), ids = new Set(defs.map(d => d.id));
+      for (const d of defs) {
+        const s = all.find(o => o.key === d.id);
+        if (!s) { sect(d.id); all.push(makeSection(cfgFor(d))); }
+        else if (s.btn.firstChild.textContent !== d.name + " ") s.btn.firstChild.textContent = d.name + " ";
+      }
+      for (let i = all.length - 1; i >= 0; i--) {
+        const o = all[i];
+        if (o.key && o.key.startsWith("cp-") && !ids.has(o.key)) { o.btn.remove(); o.panel.remove(); all.splice(i, 1); }
+      }
+    }
+    function subOf(o) {
+      if (!o.sub) { const box = el("div", "sub-box"), pills = el("div", "pills"), panels = el("div"); box.append(pills, panels); o.panel.prepend(box); o.sub = { box, pills, panels }; }
+      return o.sub;
+    }
+    // The + pill: make a pill of your own
+    const plusBtn = el("button", "pill pill-plus", "+"); plusBtn.type = "button"; plusBtn.setAttribute("aria-label", "Add a pill"); plusBtn.setAttribute("aria-expanded", "false");
+    const plusPanel = el("div", "panel"); plusPanel.hidden = true;
+    (() => {
+      const f = el("form", "row"), inp = el("input"), go = el("button", "add", "Add");
+      inp.placeholder = "Name your new pill"; inp.maxLength = 40; inp.autocomplete = "off"; go.type = "submit";
+      f.append(inp, go);
+      let kind = "flat";
+      const pick = el("div", "kind-pick");
+      const opt = (k, t, sub) => { const b = el("button"); b.type = "button"; b.append(document.createTextNode(t), el("small", null, sub));
+        b.onclick = () => { kind = k; pick.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); }; b.setAttribute("aria-pressed", k === kind); return b; };
+      pick.append(opt("flat", "Simple list", "Like Lessons"), opt("notes", "List with notes", "Like Work"));
+      const tip = el("p", "plus-tip", "Tip: hold any pill for a moment, then drag it onto another pill to put it inside. Drag it to the bar at the bottom to bring it back out.");
+      plusPanel.append(f, pick, tip);
+      const upd = () => { go.disabled = !inp.value.trim(); }; inp.oninput = upd; upd();
+      f.onsubmit = e => {
+        e.preventDefault();
+        const v = inp.value.trim().replace(/\s+/g, " "); if (!v) return;
+        const id = "cp-" + now().toString(36) + Math.random().toString(36).slice(2, 6);
+        sect("custompills").push({ id, name:v, kind, created:now(), updated:now() }); sect(id);
+        inp.value = ""; upd(); changed();
+        const s = all.find(o => o.key === id); if (s) s.btn.click();
+      };
+    })();
+    plusBtn.onclick = () => { const opening = plusPanel.hidden; closeOthers(plusBtn); if (opening) { plusPanel.hidden = false; plusBtn.setAttribute("aria-expanded", "true"); } };
+    all.push({ panel: plusPanel, render(){}, close() { plusPanel.hidden = true; plusBtn.setAttribute("aria-expanded", "false"); } });
+
+    function layout() {
+      const secs = all.filter(o => o.key), byKey = Object.fromEntries(secs.map(o => [o.key, o]));
+      for (const o of secs) {
+        let p = nestOf(o.key);
+        if (p && (!byKey[p] || p === o.key || descends(p, o.key))) p = null;   // missing parent or a loop: show it on the main list
+        const host = p ? subOf(byKey[p]) : null;
+        const pb = host ? host.pills : pillsBox, pp = host ? host.panels : panelsBox;
+        if (o.btn.parentNode !== pb) pb.append(o.btn);   // only move what changed, so typing in an open pill isn't interrupted
+        if (o.panel.parentNode !== pp) pp.append(o.panel);
+        armDrag(o);
+      }
+      secs.forEach(o => { if (o.sub) o.sub.box.hidden = !o.sub.pills.children.length; });
+      // keep the main list in its usual order (a pill dragged back out returns to its old spot)
+      const topWant = secs.filter(o => o.btn.parentNode === pillsBox).map(o => o.btn), topHave = [...pillsBox.children].filter(n => topWant.includes(n));
+      if (topWant.some((n, i) => topHave[i] !== n)) topWant.forEach(n => pillsBox.append(n));
+      if (pillsBox.lastElementChild !== plusBtn) pillsBox.append(plusBtn);
+      if (plusPanel.parentNode !== panelsBox) panelsBox.append(plusPanel);
+    }
+
+    // Drag: hold a pill ~0.4s, then drag it onto another pill (goes inside) or onto the bottom bar (back to the main list)
+    let drag = null;
+    const dropTop = el("div", "drop-top", "Drop here to put it on the main list"); dropTop.hidden = true; document.body.append(dropTop);
+    document.addEventListener("touchmove", e => { if (drag) e.preventDefault(); }, { passive:false });
+    function armDrag(o) {
+      const b = o.btn; if (b._armed) return; b._armed = true;
+      const tap = b.onclick; b.onclick = e => { if (b._dragged) return; tap.call(b, e); };
+      let t = null, x0 = 0, y0 = 0;
+      b.addEventListener("pointerdown", e => { if (e.button) return; x0 = e.clientX; y0 = e.clientY; clearTimeout(t); t = setTimeout(() => { t = null; startDrag(o, x0, y0); }, 420); });
+      b.addEventListener("pointermove", e => { if (t && Math.hypot(e.clientX - x0, e.clientY - y0) > 10) { clearTimeout(t); t = null; } });
+      ["pointerup", "pointercancel"].forEach(ev => b.addEventListener(ev, () => { clearTimeout(t); t = null; }));
+      b.addEventListener("contextmenu", e => e.preventDefault());
+    }
+    function targetAt(x, y) {
+      const hit = document.elementFromPoint(x, y); if (!hit) return null;
+      if (hit.closest(".drop-top")) return "top";
+      const pb = hit.closest(".pill"); if (!pb) return null;
+      const o = all.find(s => s.key && s.btn === pb);
+      if (!o || o === drag.o || descends(o.key, drag.o.key)) return null;
+      return o;
+    }
+    function markTarget(tg) {
+      if (drag.tg === tg) return;
+      if (drag.tg) (drag.tg === "top" ? dropTop : drag.tg.btn).classList.remove("drop-on");
+      drag.tg = tg; if (tg) (tg === "top" ? dropTop : tg.btn).classList.add("drop-on");
+    }
+    function startDrag(o, x, y) {
+      const g = o.btn.cloneNode(true); g.classList.add("drag-ghost"); g.style.left = x + "px"; g.style.top = y + "px"; document.body.append(g);
+      drag = { o, g, tg:null }; o.btn._dragged = true; o.btn.classList.add("dragging"); dropTop.hidden = false;
+      if (navigator.vibrate) navigator.vibrate(15);
+    }
+    document.addEventListener("pointermove", e => { if (!drag) return; drag.g.style.left = e.clientX + "px"; drag.g.style.top = e.clientY + "px"; markTarget(targetAt(e.clientX, e.clientY)); });
+    const endDrag = (e, drop) => {
+      if (!drag) return;
+      const { o, g } = drag; if (drop && e) markTarget(targetAt(e.clientX, e.clientY));
+      const tg = drop ? drag.tg : null; markTarget(null); g.remove(); o.btn.classList.remove("dragging"); dropTop.hidden = true; drag = null;
+      setTimeout(() => { o.btn._dragged = false; }, 350);
+      if (tg === "top") { if (nestOf(o.key)) setParent(o.key, null); }
+      else if (tg) { if (nestOf(o.key) !== tg.key) setParent(o.key, tg.key); if (tg.panel.hidden) { closeOthers(tg.btn); tg.panel.hidden = false; tg.btn.setAttribute("aria-expanded", "true"); } }
+    };
+    document.addEventListener("pointerup", e => endDrag(e, true));
+    document.addEventListener("pointercancel", e => endDrag(e, false));
+
+    function renderAll() { ensureCustom(); layout(); all.forEach(s => s.render()); }
     renderAll();
     setStatus(token ? "syncing" : "off");
     sync();
