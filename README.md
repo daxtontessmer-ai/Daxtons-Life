@@ -17,3 +17,4 @@ A personal web app for iPhone. Open it in Safari, tap Share → **Add to Home Sc
 - `img/icon-*.png` — home-screen icons
 - `manifest.webmanifest`, `sw.js` — make it installable and work with no signal
 - `CHANGELOG.md` — a dated summary of every change
+- `sd-card-organizer/` — copies the Sony SD card onto a hard drive. This runs on the MacBook. See `sd-card-organizer/README.md`.
