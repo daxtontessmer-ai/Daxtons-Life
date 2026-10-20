@@ -2,6 +2,11 @@
 
 Every commit gets a summary and timestamp here (Central Time). Newest first.
 
+## 2026-10-20
+
+- **4:01 PM CT — v5: add and edit pills, and open the latest version on its own** (Cursor, `Beta`)
+  Beta only had a Relationships pill. You can now add a list pill (people or items, each with notes) or a link pill from the + button. Relationships, a list you added, and a person inside a list can be renamed from the page. A link pill’s name and address can both be changed. Delete hides Relationships or removes a pill you added; people already saved stay in the notes on this phone. Beta still keeps everything on the phone (it has no sync code). When the phone is online, the app loads the newest copy and refreshes itself; with no signal it still opens the saved copy.
+
 ## 2026-10-10
 
 - **2:45 PM CT — v4: no word limit on notes** (Claude)

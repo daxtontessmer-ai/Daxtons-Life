@@ -78,106 +78,235 @@
     .meta .over { color:#ff8a7a; }
     .rm { border:0; background:none; color:var(--dim); font:inherit; font-size:12px; cursor:pointer; padding:0; text-decoration:underline; }
     .empty { font-size:13px; color:var(--dim); padding:10px 4px 2px; }
+    .rel { max-height:calc(100dvh - 44px - env(safe-area-inset-top)); overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:220px; }
+    .pills { display:flex; flex-wrap:wrap; gap:8px; }
+    .pill-plus { padding:9px 15px; font-size:17px; line-height:1; }
+    .pill-tools { display:flex; justify-content:flex-end; margin:4px 2px 8px; }
+    .pill-edit { min-height:44px; font-size:15px; padding:8px 2px; }
+    .pill-wrap { display:inline-flex; align-items:stretch; max-width:100%; }
+    .pill-wrap > .pill { border-top-right-radius:14px; border-bottom-right-radius:14px; text-decoration:none; }
+    .pill-gear { flex:none; min-width:44px; min-height:44px; margin-left:-1px; padding:0 12px; border-radius:0 999px 999px 0;
+      border:1px solid rgba(244,241,234,.22); background:rgba(20,20,20,.55); color:var(--ink); font:inherit; font-size:13px; font-weight:700; }
+    .field { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--dim); }
+    .field input, .link-url { width:100%; font:inherit; font-size:16px; font-weight:500; letter-spacing:0; text-transform:none; color:var(--ink);
+      background:rgba(244,241,234,.08); border:1px solid rgba(244,241,234,.16); border-radius:14px; padding:12px 14px; min-height:44px; }
+    .link-url { margin-top:8px; border-radius:999px; }
+    .kind-pick { display:flex; gap:8px; margin-top:10px; }
+    .kind-pick button { flex:1; min-height:44px; font:inherit; font-size:13px; font-weight:600; color:var(--ink); text-align:left;
+      border:1px solid rgba(244,241,234,.22); border-radius:14px; padding:9px 10px; background:rgba(244,241,234,.05); }
+    .kind-pick button small { display:block; font-weight:400; font-size:11px; color:var(--dim); margin-top:2px; }
+    .kind-pick button[aria-pressed="true"] { border-color:var(--ink); background:rgba(244,241,234,.16); }
+    .plus-tip { font-size:12px; color:var(--dim); margin:10px 2px 0; line-height:1.4; }
+    .sheet { position:fixed; inset:0; z-index:10; background:rgba(0,0,0,.55); display:flex; align-items:flex-end; justify-content:center; padding:16px 16px calc(16px + env(safe-area-inset-bottom)); }
+    .sheet-card { width:100%; max-width:520px; background:#161616; border:1px solid rgba(244,241,234,.16); border-radius:22px; padding:18px; display:flex; flex-direction:column; gap:12px; }
+    .sheet-card h2 { font-size:18px; }
+    .sheet-actions { display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+    .sheet-actions .add { min-height:44px; padding:0 18px; }
+    .rm.danger { color:#ff8a7a; }
+    [hidden] { display:none !important; }
   </style>
   <section class="rel">
-    <button class="pill" id="relBtn" aria-expanded="false" aria-controls="relPanel">
-      Relationships <span class="n" id="relCount"></span>
-      <svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-    </button>
-    <div class="panel" id="relPanel" hidden>
-      <form class="row" id="personForm">
-        <input id="personIn" placeholder="Add a person" maxlength="60" autocomplete="off">
-        <button class="add" type="submit">Add</button>
-      </form>
-      <ul class="people" id="people"></ul>
-    </div>
+    <div class="pills" id="pills"></div>
+    <div id="panels"></div>
   </section>
+  <div class="sheet" id="pillSheet" hidden>
+    <form class="sheet-card" id="pillForm">
+      <h2 id="pillSheetTitle">Edit pill</h2>
+      <label class="field">Name
+        <input id="pillName" maxlength="40" autocomplete="off" enterkeyhint="done">
+      </label>
+      <label class="field" id="pillLinkWrap" hidden>Link
+        <input id="pillHref" type="text" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="https://">
+      </label>
+      <p class="plus-tip" id="pillMsg"></p>
+      <div class="sheet-actions">
+        <button class="add" type="submit" id="pillSave">Save</button>
+        <button class="rm" type="button" id="pillCancel">Cancel</button>
+        <button class="rm danger pill-edit" type="button" id="pillDelete">Delete</button>
+      </div>
+    </form>
+  </div>
   <script>
   (() => {
-    const LS = "dl-relationships";
+    // Beta keeps notes on this phone. Relationships stays in dl-relationships so older notes are kept.
+    // New pills and renamed titles live in dl-pills. There is no sync code on this branch.
+    const REL = "dl-relationships", EXTRA = "dl-pills", CHEV = '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
     const words = s => s.trim().split(/\s+/).filter(Boolean).length;
     const $ = id => document.getElementById(id);
-    let people = [], open = new Set(), drafts = {}, focusId = null;
-    let col = null; // db collection when available
-  
-    // Local fallback until (or unless) the shared store answers
-    try { people = JSON.parse(localStorage.getItem(LS) || "[]"); } catch (e) {}
-    const saveLocal = () => { try { localStorage.setItem(LS, JSON.stringify(people)); } catch (e) {} };
-  
-    $("relBtn").onclick = () => {
-      const p = $("relPanel"), on = p.hidden;
-      p.hidden = !on; $("relBtn").setAttribute("aria-expanded", on);
-    };
-  
-    async function addPerson(name) {
-      const rec = { name, created: Date.now(), notes: [] };
-      if (col) { const ref = await col.add(rec); open.add(ref.id); focusId = ref.id; }
-      else { const id = "p" + Date.now(); people.push({ id, ...rec }); open.add(id); focusId = id; saveLocal(); render(); }
+    const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+    const now = () => Date.now();
+    let people = [], open = new Set(), drafts = {}, focusId = null, armedRemove = null;
+    try { people = JSON.parse(localStorage.getItem(REL) || "[]"); } catch (e) {}
+    let extra = { title:"", hidden:false, custom:[] };
+    try { const d = JSON.parse(localStorage.getItem(EXTRA) || "null"); if (d && Array.isArray(d.custom)) extra = { title:d.title||"", hidden:!!d.hidden, custom:d.custom }; } catch (e) {}
+    const savePeople = () => { try { localStorage.setItem(REL, JSON.stringify(people)); } catch (e) {} };
+    const saveExtra = () => { try { localStorage.setItem(EXTRA, JSON.stringify(extra)); } catch (e) {} };
+    const tidyUrl = v => { v = (v || "").trim(); if (!v) return ""; if (/^(https?:|mailto:)/i.test(v)) return v; return "https://" + v; };
+
+    let pillEdit = null, pillDelArmed = false;
+    function openPillEdit(spec) {
+      pillEdit = spec; pillDelArmed = false;
+      $("pillSheetTitle").textContent = "Edit pill";
+      $("pillName").value = spec.name || "";
+      $("pillHref").value = spec.href || "";
+      $("pillLinkWrap").hidden = !spec.hasLink;
+      $("pillDelete").textContent = "Delete";
+      $("pillMsg").textContent = spec.kind === "rel" ? "Deleting hides Relationships and keeps the people in it. Bring it back from +." : "";
+      $("pillSheet").hidden = false;
+      setTimeout(() => $("pillName").focus(), 60);
     }
-    async function setNotes(p, notes) {
-      if (col) await col.doc(p.id).update({ notes });
-      else { p.notes = notes; saveLocal(); render(); }
-    }
-    async function removePerson(p) {
-      if (!confirm("Remove " + p.name + " and everything saved about them?")) return;
-      open.delete(p.id);
-      if (col) await col.doc(p.id).delete();
-      else { people = people.filter(x => x.id !== p.id); saveLocal(); render(); }
-    }
-  
-    $("personForm").onsubmit = e => {
+    function closePillEdit() { $("pillSheet").hidden = true; pillEdit = null; }
+    $("pillForm").onsubmit = e => {
       e.preventDefault();
-      const v = $("personIn").value.trim();
-      if (!v) return;
-      $("personIn").value = "";
-      addPerson(v).catch(() => alert("Couldn't save that person. Try again."));
+      const spec = pillEdit; if (!spec) return;
+      const name = $("pillName").value.trim().replace(/\s+/g, " ").slice(0, 40);
+      if (!name) { $("pillMsg").textContent = "Give the pill a name."; return; }
+      if (spec.kind === "rel") { extra.title = name; extra.hidden = false; saveExtra(); }
+      else if (spec.kind === "person") {
+        const p = people.find(x => x.id === spec.id); if (p) { p.name = name; savePeople(); }
+      } else if (spec.kind === "list" || spec.kind === "link") {
+        const item = extra.custom.find(x => x.id === spec.id); if (!item) return;
+        item.name = name; item.updated = now();
+        if (spec.kind === "link") { const href = tidyUrl($("pillHref").value); if (!href) { $("pillMsg").textContent = "Add a link."; return; } item.href = href; }
+        saveExtra();
+      }
+      closePillEdit(); render();
     };
-  
-    function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
-  
-    function render() {
-      people.sort((a, b) => (a.created || 0) - (b.created || 0));
-      $("relCount").textContent = people.length ? people.length : "";
-      const list = $("people"); list.replaceChildren();
-      if (!people.length) list.append(el("li", "empty", "No one yet. Add your first person above."));
-      for (const p of people) {
+    $("pillCancel").onclick = () => closePillEdit();
+    $("pillDelete").onclick = () => {
+      const spec = pillEdit; if (!spec) return;
+      if (!pillDelArmed) { pillDelArmed = true; $("pillDelete").textContent = "Tap again to delete"; return; }
+      if (spec.kind === "rel") { extra.hidden = true; saveExtra(); }
+      else if (spec.kind === "person") { open.delete(spec.id); people = people.filter(x => x.id !== spec.id); savePeople(); }
+      else { const item = extra.custom.find(x => x.id === spec.id); if (item) { item.deleted = true; item.updated = now(); saveExtra(); } }
+      closePillEdit(); render();
+    };
+    $("pillSheet").onclick = e => { if (e.target.id === "pillSheet") closePillEdit(); };
+
+    const pills = $("pills"), panels = $("panels");
+    function listPanel(title, count, items, key) {
+      const btn = el("button", "pill"); btn.type = "button"; btn.setAttribute("aria-expanded", "false");
+      btn.append(document.createTextNode(title + " "), el("span", "n", count ? String(count) : "")); btn.insertAdjacentHTML("beforeend", CHEV);
+      const panel = el("div", "panel"); panel.hidden = true;
+      const tools = el("div", "pill-tools"), edit = el("button", "rm pill-edit", "Edit pill"); edit.type = "button";
+      edit.onclick = () => openPillEdit(key === "rel" ? { kind:"rel", name:title } : { kind:"list", id:key, name:title });
+      tools.append(edit);
+      const form = el("form", "row"), input = el("input"), add = el("button", "add", "Add");
+      input.placeholder = key === "rel" ? "Add a person" : "Add an item"; input.maxLength = 60; input.autocomplete = "off"; add.type = "submit";
+      form.append(input, add);
+      const list = el("ul", "people");
+      panel.append(tools, form, list);
+      btn.onclick = () => { const opening = panel.hidden; panels.querySelectorAll(".panel").forEach(p => { p.hidden = true; }); pills.querySelectorAll(".pill").forEach(b => b.setAttribute("aria-expanded", "false")); if (opening) { panel.hidden = false; btn.setAttribute("aria-expanded", "true"); } };
+      form.onsubmit = e => {
+        e.preventDefault();
+        const v = input.value.trim().replace(/\s+/g, " "); if (!v) return;
+        input.value = "";
+        const rec = { id:(key === "rel" ? "p" : "i") + now(), name:v, created:now(), notes:[] };
+        if (key === "rel") { people.push(rec); open.add(rec.id); focusId = rec.id; savePeople(); }
+        else { const bag = itemsStore(key); bag.push(rec); open.add(rec.id); focusId = rec.id; saveExtra(); }
+        render();
+      };
+      items.forEach(p => {
         const li = el("li", "person"), isOpen = open.has(p.id);
-        const b = el("button", "pill"); b.setAttribute("aria-expanded", isOpen);
-        b.append(el("span", "nm", p.name), el("span", "n", (p.notes || []).length || ""));
-        b.insertAdjacentHTML("beforeend", '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>');
+        const b = el("button", "pill"); b.type = "button"; b.setAttribute("aria-expanded", isOpen);
+        b.append(el("span", "nm", p.name), el("span", "n", (p.notes || []).length || "")); b.insertAdjacentHTML("beforeend", CHEV);
         b.onclick = () => { isOpen ? open.delete(p.id) : open.add(p.id); render(); };
         li.append(b);
         if (isOpen) {
           const box = el("div", "notes"), ul = el("ul");
+          const rename = el("form", "row"), rn = el("input"), rs = el("button", "add", "Save");
+          rn.value = p.name; rn.maxLength = 60; rn.setAttribute("aria-label", "Pill name"); rs.type = "submit";
+          rename.onsubmit = e => { e.preventDefault(); const v = rn.value.trim(); if (!v) return; p.name = v; if (key === "rel") savePeople(); else saveExtra(); render(); };
+          rename.append(rn, rs); box.append(rename);
           (p.notes || []).forEach((t, i) => {
             const n = el("li", "note"); n.append(el("span", null, t));
-            const x = el("button", "x", "×"); x.setAttribute("aria-label", "Delete");
-            x.onclick = () => setNotes(p, p.notes.filter((_, j) => j !== i)).catch(() => alert("Couldn't delete. Try again."));
+            const x = el("button", "x", "×"); x.type = "button"; x.setAttribute("aria-label", "Delete note");
+            x.onclick = () => { p.notes = p.notes.filter((_, j) => j !== i); if (key === "rel") savePeople(); else saveExtra(); render(); };
             n.append(x); ul.append(n);
           });
-          const f = el("form", "row"), inp = el("input"), add = el("button", "add", "Add");
-          inp.placeholder = "A story, desire, or thing to remember"; inp.autocomplete = "off";
-          inp.value = drafts[p.id] || ""; add.type = "submit";
-          const meta = el("div", "meta"), cnt = el("span"), rm = el("button", "rm", "Remove person");
-          rm.type = "button"; rm.onclick = () => removePerson(p).catch(() => alert("Couldn't remove. Try again."));
-          const upd = () => { const w = words(inp.value); cnt.textContent = w + (w === 1 ? " word" : " words"); add.disabled = !w; };
+          const f = el("form", "row"), inp = el("input"), addN = el("button", "add", "Add");
+          inp.placeholder = "A story, desire, or thing to remember"; inp.autocomplete = "off"; inp.value = drafts[p.id] || ""; addN.type = "submit";
+          const meta = el("div", "meta"), cnt = el("span"), rm = el("button", "rm danger", armedRemove === p.id ? "Tap again to remove" : "Remove");
+          rm.type = "button";
+          rm.onclick = () => { if (armedRemove !== p.id) { armedRemove = p.id; render(); return; } armedRemove = null; open.delete(p.id); if (key === "rel") { people = people.filter(x => x.id !== p.id); savePeople(); } else { const bag = itemsStore(key); const i = bag.findIndex(x => x.id === p.id); if (i >= 0) bag.splice(i, 1); saveExtra(); } render(); };
+          const upd = () => { const w = words(inp.value); cnt.textContent = w + (w === 1 ? " word" : " words"); addN.disabled = !w; };
           inp.oninput = () => { drafts[p.id] = inp.value; upd(); }; upd();
           f.onsubmit = e => {
             e.preventDefault();
-            const v = inp.value.trim().replace(/\s+/g, " ");
-            if (!v) return;
-            drafts[p.id] = ""; focusId = p.id;
-            setNotes(p, [...(p.notes || []), v]).catch(() => { drafts[p.id] = v; alert("Couldn't save. Try again."); render(); });
+            const v = inp.value.trim().replace(/\s+/g, " "); if (!v) return;
+            drafts[p.id] = ""; focusId = p.id; p.notes = [...(p.notes || []), v];
+            if (key === "rel") savePeople(); else saveExtra(); render();
           };
-          f.append(inp, add); meta.append(cnt, rm);
-          box.append(ul, f, meta); li.append(box);
+          f.append(inp, addN); meta.append(cnt, rm); box.append(ul, f, meta); li.append(box);
           if (focusId === p.id) { focusId = null; setTimeout(() => inp.focus(), 0); }
         }
         list.append(li);
+      });
+      if (!items.length) list.append(el("li", "empty", "Nothing yet. Add the first one above."));
+      return [btn, panel];
+    }
+    const itemsStore = id => { const item = extra.custom.find(x => x.id === id); item.items = item.items || []; return item.items; };
+
+    function render() {
+      const openPanel = panels.querySelector(".panel:not([hidden])");
+      const openKey = openPanel && openPanel.dataset.key;
+      pills.replaceChildren(); panels.replaceChildren();
+      if (!extra.hidden) {
+        const [btn, panel] = listPanel(extra.title || "Relationships", people.length, people.slice().sort((a,b)=>(a.created||0)-(b.created||0)), "rel");
+        panel.dataset.key = "rel"; pills.append(btn); panels.append(panel);
+        if (openKey === "rel") { panel.hidden = false; btn.setAttribute("aria-expanded", "true"); }
       }
+      extra.custom.filter(c => !c.deleted && c.kind !== "link").sort((a,b)=>(a.created||0)-(b.created||0)).forEach(c => {
+        const items = (c.items || []).slice().sort((a,b)=>(a.created||0)-(b.created||0));
+        const [btn, panel] = listPanel(c.name, items.length, items, c.id);
+        panel.dataset.key = c.id; pills.append(btn); panels.append(panel);
+        if (openKey === c.id) { panel.hidden = false; btn.setAttribute("aria-expanded", "true"); }
+      });
+      extra.custom.filter(c => !c.deleted && c.kind === "link").forEach(c => {
+        const wrap = el("span", "pill-wrap"), a = el("a", "pill", c.name); a.href = c.href || "#";
+        const gear = el("button", "pill-gear", "Edit"); gear.type = "button"; gear.setAttribute("aria-label", "Edit " + c.name);
+        gear.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); openPillEdit({ kind:"link", id:c.id, name:c.name, href:c.href, hasLink:true }); };
+        wrap.append(a, gear); pills.append(wrap);
+      });
+      const plus = el("button", "pill pill-plus", "+"); plus.type = "button"; plus.setAttribute("aria-label", "Add a pill");
+      const plusPanel = el("div", "panel"); plusPanel.hidden = true; plusPanel.dataset.key = "plus";
+      const f = el("form", "row"), inp = el("input"), go = el("button", "add", "Add");
+      inp.placeholder = "Name your new pill"; inp.maxLength = 40; inp.autocomplete = "off"; go.type = "submit"; f.append(inp, go);
+      const linkIn = el("input"); linkIn.className = "link-url"; linkIn.hidden = true; linkIn.placeholder = "Link (https://…)"; linkIn.inputMode = "url"; linkIn.autocomplete = "off";
+      let kind = "notes";
+      const pick = el("div", "kind-pick");
+      const opt = (k, t, sub) => { const b = el("button"); b.type = "button"; b.append(document.createTextNode(t), el("small", null, sub)); b.setAttribute("aria-pressed", k === kind);
+        b.onclick = () => { kind = k; linkIn.hidden = k !== "link"; pick.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); go.disabled = !inp.value.trim() || (kind === "link" && !linkIn.value.trim()); }; return b; };
+      pick.append(opt("notes", "List with notes", "Like Relationships"), opt("link", "Link", "Opens a page"));
+      const hidden = [];
+      if (extra.hidden) hidden.push("Relationships");
+      extra.custom.filter(c => c.deleted).forEach(c => hidden.push(c.name));
+      plusPanel.append(f, linkIn, pick, el("p", "plus-tip", "Open a pill and tap Edit pill to rename it. A link pill’s Edit button changes the name and the link."));
+      if (hidden.length) {
+        const row = el("div");
+        hidden.forEach(label => { const b = el("button", "rm pill-edit", "Bring back " + label); b.type = "button"; b.onclick = () => {
+          if (label === "Relationships" && extra.hidden) { extra.hidden = false; saveExtra(); }
+          else { const c = extra.custom.find(x => x.deleted && x.name === label); if (c) { c.deleted = false; c.updated = now(); saveExtra(); } }
+          render();
+        }; row.append(b); });
+        plusPanel.append(el("p", "plus-tip", "Hidden pills"), row);
+      }
+      const upd = () => { go.disabled = !inp.value.trim() || (kind === "link" && !linkIn.value.trim()); };
+      inp.oninput = upd; linkIn.oninput = upd;
+      linkIn.addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); if (!go.disabled) f.requestSubmit(); } });
+      go.disabled = true;
+      f.onsubmit = e => {
+        e.preventDefault();
+        const v = inp.value.trim().replace(/\s+/g, " "); if (!v) return;
+        if (kind === "link") { const href = tidyUrl(linkIn.value); if (!href) return; extra.custom.push({ id:"lp"+now(), name:v, kind:"link", href, created:now(), updated:now() }); }
+        else extra.custom.push({ id:"cp"+now(), name:v, kind:"notes", items:[], created:now(), updated:now() });
+        saveExtra(); render();
+      };
+      plus.onclick = () => { const opening = plusPanel.hidden; panels.querySelectorAll(".panel").forEach(p => p.hidden = true); pills.querySelectorAll("button.pill").forEach(b => b.setAttribute("aria-expanded","false")); if (opening) { plusPanel.hidden = false; plus.setAttribute("aria-expanded","true"); } };
+      pills.append(plus); panels.append(plusPanel);
+      if (openKey === "plus") { plusPanel.hidden = false; plus.setAttribute("aria-expanded", "true"); }
     }
     render();
-  
   })();
   </script>
   <main>
@@ -189,7 +318,16 @@
 <script>
   document.getElementById("day").textContent =
     new Date().toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  if ("serviceWorker" in navigator) {
+    let reloading = false;
+    const hadController = !!navigator.serviceWorker.controller;
+    const reloadOnce = () => { if (reloading) return; reloading = true; location.reload(); };
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadController) reloadOnce(); });
+    navigator.serviceWorker.addEventListener("message", e => { if (e.data === "reload") reloadOnce(); });
+    navigator.serviceWorker.register("sw.js").then(reg => {
+      document.addEventListener("visibilitychange", () => { if (!document.hidden && reg.update) reg.update(); });
+    }).catch(() => {});
+  }
 </script>
 </body>
 </html>
