@@ -2,6 +2,11 @@
 
 Every commit gets a summary and timestamp here (Central Time). Newest first.
 
+## 2026-10-20
+
+- **4:40 PM CT — v46: Organize SD card** (`main`)
+  New Organize SD card button in Links. On the MacBook, with the helper running, it opens the local organizer. On the iPhone, or when the helper is not running, it explains that the copy happens on the MacBook and how to start it (double-click Organize SD Card.command in sd-card-organizer). The helper copies photos and videos straight from the SD card onto the hard drive, one folder per day, checks each file, and only deletes from the card when you ask.
+
 ## 2026-10-14
 
 - **5:35 PM CT — v45: Prayers, your own pills (+), and pills inside pills** (Claude, `main`)

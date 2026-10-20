@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Organize SD card</title>
+<style>
+  :root { --ink:#f4f1ea; --dim:rgba(244,241,234,.68); --bg:#0e0e0e; --line:rgba(244,241,234,.16); --card:#171717; --good:#b7e0b2; --warn:#ffb4a8; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
+  body { min-height:100vh; }
+  main { max-width:920px; margin:0 auto; padding:32px 20px 80px; }
+  h1 { font-size:40px; letter-spacing:-.04em; margin:0 0 8px; }
+  .lede { color:var(--dim); font-size:18px; line-height:1.45; margin:0 0 22px; max-width:62ch; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:740px) { .grid { grid-template-columns:1fr; } h1 { font-size:32px; } }
+  section { background:var(--card); border:1px solid var(--line); border-radius:22px; padding:16px; margin-top:14px; }
+  h2 { font-size:13px; letter-spacing:.16em; text-transform:uppercase; color:var(--dim); margin:0 0 10px; font-weight:650; }
+  .vols { display:flex; flex-direction:column; gap:8px; }
+  .vol, button { font:inherit; }
+  .vol { text-align:left; color:var(--ink); background:rgba(244,241,234,.06); border:1px solid var(--line); border-radius:16px; padding:12px 14px; cursor:pointer; }
+  .vol b { display:block; font-size:17px; }
+  .vol span { color:var(--dim); font-size:13px; }
+  .vol[aria-pressed="true"] { border-color:var(--ink); background:rgba(244,241,234,.14); }
+  .vol:disabled { opacity:.45; cursor:not-allowed; }
+  label { display:block; font-size:13px; color:var(--dim); margin-bottom:6px; }
+  input { width:100%; font:inherit; font-size:18px; color:var(--ink); background:rgba(244,241,234,.06); border:1px solid var(--line); border-radius:14px; padding:12px 14px; }
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .primary, .quiet, .danger { border:0; border-radius:999px; padding:12px 18px; font-weight:700; cursor:pointer; }
+  .primary { background:var(--ink); color:#111; }
+  .quiet { background:transparent; color:var(--ink); border:1px solid var(--line); }
+  .danger { background:#ff8a7a; color:#2a0906; }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  .bar { height:10px; border-radius:99px; background:rgba(244,241,234,.12); overflow:hidden; margin:12px 0; }
+  .bar i { display:block; height:100%; width:0; background:#d7c4a3; }
+  .log { list-style:none; padding:0; margin:8px 0 0; max-height:220px; overflow:auto; }
+  .log li { padding:6px 0; border-top:1px solid var(--line); font-size:14px; }
+  .days { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+  .day { display:flex; justify-content:space-between; gap:12px; font-size:15px; }
+  .muted { color:var(--dim); }
+  .warn { color:var(--warn); }
+  .good { color:var(--good); }
+  .danger-zone { border-color:rgba(255,138,122,.45); }
+  .empty { color:var(--dim); font-size:15px; line-height:1.4; }
+  #status { min-height:1.3em; margin:8px 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Organize SD card</h1>
+  <p class="lede">Copies every photo and video straight from the Sony card onto the hard drive. One folder per day: <b>YYYY-MM-DD/Photos</b> and <b>YYYY-MM-DD/Videos</b>. Sony XML and THM files stay next to their video. Nothing is saved on this Mac.</p>
+
+  <div class="grid">
+    <section>
+      <h2>SD card</h2>
+      <div class="vols" id="sources"><p class="empty">Looking for drives…</p></div>
+    </section>
+    <section>
+      <h2>Hard drive</h2>
+      <div class="vols" id="dests"><p class="empty">Looking for drives…</p></div>
+    </section>
+  </div>
+
+  <section>
+    <label for="rootName">Folder name on the hard drive</label>
+    <input id="rootName" value="Sony" autocomplete="off" maxlength="80">
+    <p class="muted">Files land in this folder, then a folder for the day they were taken.</p>
+    <div class="row" style="margin-top:14px">
+      <button class="quiet" id="refresh" type="button">Refresh drives</button>
+      <button class="primary" id="scan" type="button">Look at the card</button>
+    </div>
+    <p id="status" class="muted"></p>
+    <div id="summary"></div>
+    <div class="row" style="margin-top:14px">
+      <button class="primary" id="copy" type="button" disabled>Copy to the hard drive</button>
+    </div>
+    <div class="bar" id="bar" hidden><i id="barFill"></i></div>
+    <ul class="log" id="log"></ul>
+  </section>
+
+  <section class="danger-zone">
+    <h2>Delete from the SD card</h2>
+    <p class="muted">This never runs by itself. It only removes files that were copied and then checked, byte for byte, on the hard drive. Anything that was not checked stays on the card.</p>
+    <button class="quiet" id="previewDelete" type="button">Show what would be deleted</button>
+    <div id="deleteSummary"></div>
+  </section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let source = "", dest = "", scanned = null, deleteToken = "";
+
+function fmt(n) {
+  n = Number(n) || 0;
+  if (n < 1024) return n + " B";
+  const units = ["KB", "MB", "GB", "TB"];
+  let i = -1;
+  do { n /= 1024; i++; } while (n >= 1024 && i < units.length - 1);
+  return (n >= 10 ? n.toFixed(0) : n.toFixed(1)) + " " + units[i];
+}
+async function api(path, body) {
+  const res = await fetch(path, body ? {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  } : undefined);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Something went wrong.");
+  return data;
+}
+function picks() {
+  return { source, dest, rootName: $("rootName").value.trim() || "Sony" };
+}
+function renderVolumes(list) {
+  const draw = (el, which) => {
+    el.replaceChildren();
+    const usable = list.filter(v => !v.internal);
+    const blocked = list.filter(v => v.internal);
+    if (!usable.length && !blocked.length) {
+      el.append(Object.assign(document.createElement("p"), { className: "empty", textContent: "Nothing is plugged in. Plug in the SD card and the hard drive, then refresh." }));
+      return;
+    }
+    for (const v of usable) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "vol";
+      const on = (which === "source" ? source : dest) === v.path;
+      b.setAttribute("aria-pressed", on);
+      b.innerHTML = "<b></b><span></span>";
+      b.querySelector("b").textContent = v.name;
+      b.querySelector("span").textContent = v.free == null ? "External drive" : fmt(v.free) + " free";
+      b.onclick = () => {
+        if (which === "source") { source = v.path; if (dest === v.path) dest = ""; }
+        else { dest = v.path; if (source === v.path) source = ""; }
+        scanned = null; deleteToken = ""; $("copy").disabled = true; $("summary").replaceChildren(); $("deleteSummary").replaceChildren();
+        renderVolumes(list);
+      };
+      el.append(b);
+    }
+    for (const v of blocked) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "vol"; b.disabled = true;
+      b.innerHTML = "<b></b><span></span>";
+      b.querySelector("b").textContent = v.name;
+      b.querySelector("span").textContent = "Mac internal disk — not used";
+      el.append(b);
+    }
+  };
+  draw($("sources"), "source");
+  draw($("dests"), "dest");
+}
+async function refresh() {
+  const data = await api("/api/volumes");
+  const paths = new Set(data.volumes.map(v => v.path));
+  if (!paths.has(source)) source = "";
+  if (!paths.has(dest)) dest = "";
+  renderVolumes(data.volumes);
+}
+function needDrives() {
+  if (!source || !dest) throw new Error("Pick the SD card and the hard drive.");
+  if (source === dest) throw new Error("Pick two different drives.");
+}
+$("refresh").onclick = () => refresh().catch(e => $("status").textContent = e.message);
+$("scan").onclick = async () => {
+  $("status").textContent = "Reading the card…";
+  $("summary").replaceChildren();
+  try {
+    needDrives();
+    scanned = await api("/api/scan", picks());
+    const total = scanned.photos + scanned.videos + scanned.sidecars;
+    $("status").textContent = total ? "Ready to copy." : "No photos or videos were found on that card.";
+    $("copy").disabled = !total;
+    const box = document.createElement("div");
+    box.className = "days";
+    const head = document.createElement("p");
+    head.innerHTML = "<b></b>";
+    head.querySelector("b").textContent = `${scanned.photos} photos · ${scanned.videos} videos · ${scanned.sidecars} video notes · ${fmt(scanned.bytes)}`;
+    box.append(head);
+    if (scanned.fallbackDates) {
+      const note = document.createElement("p");
+      note.className = "muted";
+      note.textContent = scanned.fallbackDates + (scanned.fallbackDates === 1 ? " file had no camera date, so the file date was used." : " files had no camera date, so the file date was used.");
+      box.append(note);
+    }
+    for (const day of scanned.days) {
+      const row = document.createElement("div");
+      row.className = "day";
+      const left = document.createElement("span");
+      left.textContent = day.day;
+      const right = document.createElement("span");
+      right.className = "muted";
+      const bits = [];
+      if (day.photos) bits.push(day.photos + " photos");
+      if (day.videos) bits.push(day.videos + " videos");
+      if (day.sidecars) bits.push(day.sidecars + " notes");
+      right.textContent = bits.join(" · ");
+      row.append(left, right);
+      box.append(row);
+    }
+    $("summary").append(box);
+  } catch (e) {
+    $("status").textContent = e.message;
+    $("copy").disabled = true;
+  }
+};
+function setBar(done, total) {
+  $("bar").hidden = false;
+  const pct = total ? Math.max(0, Math.min(100, Math.round(100 * done / total))) : 0;
+  $("barFill").style.width = pct + "%";
+}
+$("copy").onclick = async () => {
+  $("copy").disabled = true; $("scan").disabled = true;
+  $("log").replaceChildren();
+  $("status").textContent = "Copying straight onto the hard drive…";
+  try {
+    needDrives();
+    const { jobId } = await api("/api/copy", picks());
+    await new Promise((resolve, reject) => {
+      const tick = async () => {
+        try {
+          const job = await api("/api/jobs/" + jobId);
+          setBar(job.doneBytes, job.totalBytes);
+          const current = job.current ? " — " + job.current : "";
+          $("status").textContent = (job.phase === "checking" ? "Checking" : "Copying") + " " + job.doneFiles + " / " + job.totalFiles + current;
+          $("log").replaceChildren(...job.log.slice().reverse().map(line => {
+            const li = document.createElement("li"); li.textContent = line; return li;
+          }));
+          if (job.state === "running") { setTimeout(tick, 400); return; }
+          if (job.state === "error") { reject(new Error(job.error || "Copy failed.")); return; }
+          const r = job.report || { copied: 0, skipped: 0, failed: 0 };
+          $("status").textContent = `Done. ${r.copied} copied, ${r.skipped} already on the drive, ${r.failed} failed.`;
+          $("status").className = r.failed ? "warn" : "good";
+          resolve();
+        } catch (err) { reject(err); }
+      };
+      tick();
+    });
+  } catch (e) {
+    $("status").className = "warn";
+    $("status").textContent = e.message;
+  } finally {
+    $("scan").disabled = false;
+    $("copy").disabled = !scanned;
+  }
+};
+$("previewDelete").onclick = async () => {
+  $("deleteSummary").replaceChildren();
+  deleteToken = "";
+  try {
+    needDrives();
+    $("previewDelete").disabled = true;
+    const plan = await api("/api/delete-preview", picks());
+    deleteToken = plan.token || "";
+    const box = document.createElement("div");
+    const p = document.createElement("p");
+    p.innerHTML = "<b></b>";
+    p.querySelector("b").textContent = plan.eligible.length
+      ? `${plan.eligible.length} files (${fmt(plan.eligibleBytes)}) are checked on the drive and can be deleted from the card.`
+      : "Nothing on the card is ready to delete. Copy and check the files first.";
+    box.append(p);
+    if (plan.keptCount) {
+      const k = document.createElement("p");
+      k.className = "muted";
+      k.textContent = plan.keptCount + (plan.keptCount === 1 ? " file will stay on the card." : " files will stay on the card.");
+      box.append(k);
+      for (const item of plan.kept.slice(0, 8)) {
+        const line = document.createElement("p");
+        line.className = "muted";
+        line.textContent = item.name + " — " + item.reason;
+        box.append(line);
+      }
+    }
+    if (plan.eligible.length) {
+      const go = document.createElement("button");
+      go.type = "button"; go.className = "danger";
+      go.textContent = "Delete these " + plan.eligible.length + " files from the SD card";
+      go.onclick = async () => {
+        go.disabled = true;
+        const sure = document.createElement("div");
+        sure.style.marginTop = "10px";
+        const note = document.createElement("p");
+        note.textContent = "This removes them from the card only. The copies on the hard drive stay. This cannot be undone.";
+        const yes = document.createElement("button");
+        yes.type = "button"; yes.className = "danger"; yes.textContent = "Yes, delete them from the card";
+        const no = document.createElement("button");
+        no.type = "button"; no.className = "quiet"; no.textContent = "Cancel"; no.style.marginLeft = "8px";
+        no.onclick = () => sure.remove();
+        yes.onclick = async () => {
+          yes.disabled = true;
+          try {
+            const result = await api("/api/delete", { ...picks(), token: deleteToken, confirm: "DELETE FROM CARD" });
+            box.replaceChildren();
+            const done = document.createElement("p");
+            done.className = "good";
+            done.textContent = "Deleted " + result.deleted.length + " files from the card. The hard drive was not changed.";
+            box.append(done);
+            if (result.skipped && result.skipped.length) {
+              const left = document.createElement("p");
+              left.className = "muted";
+              left.textContent = result.skipped.length + " files were left on the card because they were not verified.";
+              box.append(left);
+            }
+          } catch (e) {
+            const err = document.createElement("p");
+            err.className = "warn"; err.textContent = e.message; box.append(err);
+          }
+        };
+        sure.append(note, yes, no);
+        box.append(sure);
+        go.hidden = true;
+      };
+      box.append(go);
+    }
+    $("deleteSummary").append(box);
+  } catch (e) {
+    const err = document.createElement("p");
+    err.className = "warn"; err.textContent = e.message;
+    $("deleteSummary").append(err);
+  } finally {
+    $("previewDelete").disabled = false;
+  }
+};
+refresh().catch(e => $("status").textContent = e.message);
+</script>
+</body>
+</html>
