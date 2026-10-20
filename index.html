@@ -99,7 +99,9 @@
     .plus-tip { font-size:12px; color:var(--dim); margin:10px 2px 0; line-height:1.4; }
     .sheet { position:fixed; inset:0; z-index:10; background:rgba(0,0,0,.55); display:flex; align-items:flex-end; justify-content:center; padding:16px 16px calc(16px + env(safe-area-inset-bottom)); }
     .sheet-card { width:100%; max-width:520px; background:#161616; border:1px solid rgba(244,241,234,.16); border-radius:22px; padding:18px; display:flex; flex-direction:column; gap:12px; }
-    .sheet-card h2 { font-size:18px; }
+    .sheet-card h2 { font-size:18px; font-weight:700; }
+    .sheet-card p { font-size:14px; line-height:1.45; color:var(--dim); }
+    .sheet-card b { color:var(--ink); font-weight:600; }
     .sheet-actions { display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
     .sheet-actions .add { min-height:44px; padding:0 18px; }
     .rm.danger { color:#ff8a7a; }
@@ -137,8 +139,8 @@
     const now = () => Date.now();
     let people = [], open = new Set(), drafts = {}, focusId = null, armedRemove = null;
     try { people = JSON.parse(localStorage.getItem(REL) || "[]"); } catch (e) {}
-    let extra = { title:"", hidden:false, custom:[] };
-    try { const d = JSON.parse(localStorage.getItem(EXTRA) || "null"); if (d && Array.isArray(d.custom)) extra = { title:d.title||"", hidden:!!d.hidden, custom:d.custom }; } catch (e) {}
+    let extra = { title:"", hidden:false, orgTitle:"", orgHidden:false, custom:[] };
+    try { const d = JSON.parse(localStorage.getItem(EXTRA) || "null"); if (d && Array.isArray(d.custom)) extra = { title:d.title||"", hidden:!!d.hidden, orgTitle:d.orgTitle||"", orgHidden:!!d.orgHidden, custom:d.custom }; } catch (e) {}
     const savePeople = () => { try { localStorage.setItem(REL, JSON.stringify(people)); } catch (e) {} };
     const saveExtra = () => { try { localStorage.setItem(EXTRA, JSON.stringify(extra)); } catch (e) {} };
     const tidyUrl = v => { v = (v || "").trim(); if (!v) return ""; if (/^(https?:|mailto:)/i.test(v)) return v; return "https://" + v; };
@@ -151,7 +153,7 @@
       $("pillHref").value = spec.href || "";
       $("pillLinkWrap").hidden = !spec.hasLink;
       $("pillDelete").textContent = "Delete";
-      $("pillMsg").textContent = spec.kind === "rel" ? "Deleting hides Relationships and keeps the people in it. Bring it back from +." : "";
+      $("pillMsg").textContent = spec.kind === "rel" ? "Deleting hides Relationships and keeps the people in it. Bring it back from +." : (spec.kind === "org" ? "Deleting hides this pill. Bring it back from +." : "");
       $("pillSheet").hidden = false;
       setTimeout(() => $("pillName").focus(), 60);
     }
@@ -162,6 +164,7 @@
       const name = $("pillName").value.trim().replace(/\s+/g, " ").slice(0, 40);
       if (!name) { $("pillMsg").textContent = "Give the pill a name."; return; }
       if (spec.kind === "rel") { extra.title = name; extra.hidden = false; saveExtra(); }
+      else if (spec.kind === "org") { extra.orgTitle = name; extra.orgHidden = false; saveExtra(); }
       else if (spec.kind === "person") {
         const p = people.find(x => x.id === spec.id); if (p) { p.name = name; savePeople(); }
       } else if (spec.kind === "list" || spec.kind === "link") {
@@ -177,11 +180,51 @@
       const spec = pillEdit; if (!spec) return;
       if (!pillDelArmed) { pillDelArmed = true; $("pillDelete").textContent = "Tap again to delete"; return; }
       if (spec.kind === "rel") { extra.hidden = true; saveExtra(); }
+      else if (spec.kind === "org") { extra.orgHidden = true; saveExtra(); }
       else if (spec.kind === "person") { open.delete(spec.id); people = people.filter(x => x.id !== spec.id); savePeople(); }
       else { const item = extra.custom.find(x => x.id === spec.id); if (item) { item.deleted = true; item.updated = now(); saveExtra(); } }
       closePillEdit(); render();
     };
     $("pillSheet").onclick = e => { if (e.target.id === "pillSheet") closePillEdit(); };
+
+    // Organize SD card runs on the MacBook. The iPhone only gets instructions.
+    const ORGANIZER = "http://127.0.0.1:8765/";
+    const orgName = () => extra.orgTitle || "Organize SD card";
+    const orgSheet = el("div", "sheet"); orgSheet.hidden = true; orgSheet.id = "orgSheet";
+    const orgCard = el("div", "sheet-card"); orgCard.setAttribute("role", "dialog"); orgCard.setAttribute("aria-labelledby", "orgTitle");
+    const orgTitle = el("h2", null, "This runs on your MacBook"); orgTitle.id = "orgTitle";
+    const orgWhy = el("p"), orgHow = el("p");
+    orgHow.innerHTML = "<b>How to start it</b><br>1. Plug the SD card and the hard drive into the MacBook.<br>2. Open the Daxton's Life folder, then <b>sd-card-organizer</b>.<br>3. Double-click <b>Organize SD Card.command</b>.<br>4. If the Mac says it can't be opened, Control-click it and choose Open.<br>Leave that window open while it copies. Then tap Organize SD card again.";
+    const orgActions = el("div", "sheet-actions");
+    const orgOpen = el("a", "add", "Open the organizer");
+    orgOpen.href = ORGANIZER; orgOpen.target = "_blank"; orgOpen.rel = "noopener";
+    orgOpen.style.cssText = "display:inline-flex;align-items:center;text-decoration:none;padding:8px 16px";
+    const orgClose = el("button", "rm", "Close"); orgClose.type = "button";
+    orgClose.onclick = () => { orgSheet.hidden = true; };
+    orgActions.append(orgOpen, orgClose);
+    orgCard.append(orgTitle, orgWhy, orgHow, orgActions);
+    orgSheet.append(orgCard);
+    orgSheet.addEventListener("click", e => { if (e.target === orgSheet) orgSheet.hidden = true; });
+    document.body.append(orgSheet);
+    const orgIos = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    function showOrganizer(kind) {
+      orgWhy.textContent = kind === "iphone"
+        ? "You're on the iPhone. It can't see an SD card or hard drive plugged into the Mac, so the copy has to happen on the MacBook."
+        : "The organizer isn't running yet, or this page couldn't reach it. Start it on the MacBook with the steps below. If it is already open, use Open the organizer.";
+      orgOpen.hidden = kind === "iphone";
+      closePillEdit();
+      orgSheet.hidden = false;
+    }
+    function openOrganizer() {
+      if (orgIos) { showOrganizer("iphone"); return; }
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 1500);
+      fetch(ORGANIZER + "api/health", { signal: ctrl.signal, cache: "no-store" })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(j => { if (!j || !j.ok) throw 0; window.open(ORGANIZER, "_blank", "noopener"); })
+        .catch(() => showOrganizer("mac"))
+        .finally(() => clearTimeout(timer));
+    }
 
     const pills = $("pills"), panels = $("panels");
     function listPanel(title, count, items, key) {
@@ -268,6 +311,15 @@
         gear.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); openPillEdit({ kind:"link", id:c.id, name:c.name, href:c.href, hasLink:true }); };
         wrap.append(a, gear); pills.append(wrap);
       });
+      if (!extra.orgHidden) {
+        const wrap = el("span", "pill-wrap"), btn = el("button", "pill"); btn.type = "button";
+        btn.append(document.createTextNode(orgName() + " "));
+        btn.insertAdjacentHTML("beforeend", '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>');
+        btn.onclick = () => openOrganizer();
+        const gear = el("button", "pill-gear", "Edit"); gear.type = "button"; gear.setAttribute("aria-label", "Edit " + orgName());
+        gear.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); orgSheet.hidden = true; openPillEdit({ kind:"org", name:orgName() }); };
+        wrap.append(btn, gear); pills.append(wrap);
+      }
       const plus = el("button", "pill pill-plus", "+"); plus.type = "button"; plus.setAttribute("aria-label", "Add a pill");
       const plusPanel = el("div", "panel"); plusPanel.hidden = true; plusPanel.dataset.key = "plus";
       const f = el("form", "row"), inp = el("input"), go = el("button", "add", "Add");
@@ -280,12 +332,14 @@
       pick.append(opt("notes", "List with notes", "Like Relationships"), opt("link", "Link", "Opens a page"));
       const hidden = [];
       if (extra.hidden) hidden.push("Relationships");
+      if (extra.orgHidden) hidden.push(orgName());
       extra.custom.filter(c => c.deleted).forEach(c => hidden.push(c.name));
       plusPanel.append(f, linkIn, pick, el("p", "plus-tip", "Open a pill and tap Edit pill to rename it. A link pill’s Edit button changes the name and the link."));
       if (hidden.length) {
         const row = el("div");
         hidden.forEach(label => { const b = el("button", "rm pill-edit", "Bring back " + label); b.type = "button"; b.onclick = () => {
           if (label === "Relationships" && extra.hidden) { extra.hidden = false; saveExtra(); }
+          else if (extra.orgHidden && label === orgName()) { extra.orgHidden = false; saveExtra(); }
           else { const c = extra.custom.find(x => x.deleted && x.name === label); if (c) { c.deleted = false; c.updated = now(); saveExtra(); } }
           render();
         }; row.append(b); });
