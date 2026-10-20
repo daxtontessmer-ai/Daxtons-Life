@@ -1050,6 +1050,50 @@
       btn.onclick = () => { const opening = panel.hidden; all.forEach(o => o.close()); if (opening) { panel.hidden = false; btn.setAttribute("aria-expanded", "true"); } };
       all.push(sec);
     })();
+    // ---------- Organize SD card: the helper runs on the MacBook, where the drives are plugged in ----------
+    (() => {
+      const ORGANIZER = "http://127.0.0.1:8765/";
+      const btn = el("button", "pill");
+      btn.type = "button";
+      btn.append(document.createTextNode("Organize SD card "));
+      btn.insertAdjacentHTML("beforeend", '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>');
+      linkPills.append(btn);
+      const sheet = el("div", "sheet"); sheet.hidden = true;
+      const card = el("div", "sheet-card"); card.setAttribute("role", "dialog"); card.setAttribute("aria-labelledby", "orgTitle");
+      const title = el("h2", null, "This runs on your MacBook"); title.id = "orgTitle";
+      const why = el("p");
+      const how = el("p");
+      how.innerHTML = "<b>How to start it</b><br>1. Plug the SD card and the hard drive into the MacBook.<br>2. Open the Daxton's Life folder, then <b>sd-card-organizer</b>.<br>3. Double-click <b>Organize SD Card.command</b>.<br>4. If the Mac says it can't be opened, Control-click it and choose Open.<br>Leave that window open while it copies. Then tap Organize SD card again.";
+      const actions = el("div", "sheet-actions");
+      const open = el("a", "add", "Open the organizer");
+      open.href = ORGANIZER; open.target = "_blank"; open.rel = "noopener";
+      open.style.cssText = "display:inline-flex;align-items:center;text-decoration:none;padding:8px 16px";
+      const close = el("button", "rm", "Close"); close.type = "button";
+      close.onclick = () => { sheet.hidden = true; };
+      actions.append(open, close);
+      card.append(title, why, how, actions);
+      sheet.append(card);
+      sheet.addEventListener("click", e => { if (e.target === sheet) sheet.hidden = true; });
+      document.body.append(sheet);
+      const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      function show(kind) {
+        why.textContent = kind === "iphone"
+          ? "You're on the iPhone. It can't see an SD card or hard drive plugged into the Mac, so the copy has to happen on the MacBook."
+          : "The organizer isn't running yet, or this page couldn't reach it. Start it on the MacBook with the steps below. If it is already open, use Open the organizer.";
+        open.hidden = kind === "iphone";
+        sheet.hidden = false;
+      }
+      btn.onclick = () => {
+        if (ios) { show("iphone"); return; }
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 1500);
+        fetch(ORGANIZER + "api/health", { signal: ctrl.signal, cache: "no-store" })
+          .then(r => r.ok ? r.json() : Promise.reject())
+          .then(j => { if (!j || !j.ok) throw 0; window.open(ORGANIZER, "_blank", "noopener"); })
+          .catch(() => show("mac"))
+          .finally(() => clearTimeout(timer));
+      };
+    })();
     // ---------- Compare versions: Main, Testing and Beta side by side (tabs on a phone) ----------
     (() => {
       const V = [
