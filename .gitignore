@@ -16,6 +16,8 @@ Thumbs.db
 node_modules/
 dist/
 build/
+__pycache__/
+*.pyc
 
 # Large media (keep the app's own small images in img/)
 *.mov
