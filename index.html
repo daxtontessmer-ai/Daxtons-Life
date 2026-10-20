@@ -325,7 +325,7 @@
         <input id="pillSub" maxlength="80" autocomplete="off">
       </label>
       <label class="field" id="pillLinkWrap" hidden>Link
-        <input id="pillHref" type="url" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="https://">
+        <input id="pillHref" type="text" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="https://">
       </label>
       <p class="sheet-msg" id="pillMsg"></p>
       <div class="sheet-actions">
@@ -1081,7 +1081,7 @@
       f.append(inp, go);
       let kind = "flat";
       const linkIn = el("input"); linkIn.className = "link-url"; linkIn.hidden = true; linkIn.placeholder = "Link (https://…)";
-      linkIn.type = "url"; linkIn.inputMode = "url"; linkIn.autocapitalize = "off"; linkIn.autocomplete = "off"; linkIn.spellcheck = false;
+      linkIn.type = "text"; linkIn.inputMode = "url"; linkIn.autocapitalize = "off"; linkIn.autocomplete = "off"; linkIn.spellcheck = false;
       const pick = el("div", "kind-pick");
       const opt = (k, t, sub) => { const b = el("button"); b.type = "button"; b.append(document.createTextNode(t), el("small", null, sub));
         b.onclick = () => { kind = k; linkIn.hidden = k !== "link"; pick.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); upd(); }; b.setAttribute("aria-pressed", k === kind); return b; };
