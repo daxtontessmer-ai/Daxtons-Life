@@ -4,8 +4,10 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-20
 
-- **4:50 PM CT — v45: Organize SD card** (`testing`)
-  New Organize SD card button in Links. On the MacBook, with the helper running, it opens the local organizer. On the iPhone, or when the helper is not running, it explains that the copy happens on the MacBook and how to start it (double-click Organize SD Card.command in sd-card-organizer). The helper copies photos and videos straight from the SD card onto the hard drive, one folder per day, checks each file, and only deletes from the card when you ask. Not on `main` yet.
+- **4:50 PM CT — v46: Organize SD card** (`testing`)
+  New Organize SD card button in Links, beside the editable link pills. It has an Edit button so the name can be changed or the pill hidden, and Bring back from + puts it back. On the MacBook, with the helper running, it opens the local organizer. On the iPhone, or when the helper is not running, it explains that the copy happens on the MacBook and how to start it (double-click Organize SD Card.command in sd-card-organizer). The helper copies photos and videos straight from the SD card onto the hard drive, one folder per day, checks each file, and only deletes from the card when you ask. Not on `main` yet.
+- **4:01 PM CT — v45: edit pills on the phone, and open the latest version on its own** (Cursor, `testing`)
+  Every home-screen pill can be changed from the app. Life pills (Relationships, Just dos, Work, School, Live by, Crazy IdEaS, Lessons, Prayers, App Roadmap, and pills you add with +) get an Edit pill button for the name. Link pills in Links and Proyectos (Daxton's Portfolio, Photo editor, and the links inside Shot List) can change their name and their link. The + pill can add a simple list, a list with notes, or a link. Delete hides a built-in pill and keeps what is inside it. Items inside a pill still change by holding them, or by swiping left. None of these pills have their own color. When the phone is online, the app loads the newest copy and refreshes itself; with no signal it still opens the saved copy. Not on `main` yet.
 
 ## 2026-10-12
 
