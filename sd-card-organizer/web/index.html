@@ -172,7 +172,8 @@ $("scan").onclick = async () => {
     box.className = "days";
     const head = document.createElement("p");
     head.innerHTML = "<b></b>";
-    head.querySelector("b").textContent = `${scanned.photos} photos · ${scanned.videos} videos · ${scanned.sidecars} video notes · ${fmt(scanned.bytes)}`;
+    const word = (n, one, many) => n + " " + (n === 1 ? one : many);
+    head.querySelector("b").textContent = `${word(scanned.photos, "photo", "photos")} · ${word(scanned.videos, "video", "videos")} · ${word(scanned.sidecars, "video note", "video notes")} · ${fmt(scanned.bytes)}`;
     box.append(head);
     if (scanned.fallbackDates) {
       const note = document.createElement("p");
@@ -188,9 +189,9 @@ $("scan").onclick = async () => {
       const right = document.createElement("span");
       right.className = "muted";
       const bits = [];
-      if (day.photos) bits.push(day.photos + " photos");
-      if (day.videos) bits.push(day.videos + " videos");
-      if (day.sidecars) bits.push(day.sidecars + " notes");
+      if (day.photos) bits.push(word(day.photos, "photo", "photos"));
+      if (day.videos) bits.push(word(day.videos, "video", "videos"));
+      if (day.sidecars) bits.push(word(day.sidecars, "note", "notes"));
       right.textContent = bits.join(" · ");
       row.append(left, right);
       box.append(row);
