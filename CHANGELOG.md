@@ -2,6 +2,11 @@
 
 Every commit gets a summary and timestamp here (Central Time). Newest first.
 
+## 2026-10-20
+
+- **4:01 PM CT — v45: edit pills on the phone, and open the latest version on its own** (Cursor, `testing`)
+  Every home-screen pill can be changed from the app. Life pills (Relationships, Just dos, Work, School, Live by, Crazy IdEaS, Lessons, Prayers, App Roadmap, and pills you add with +) get an Edit pill button for the name. Link pills in Links and Proyectos (Daxton's Portfolio, Photo editor, and the links inside Shot List) can change their name and their link. The + pill can add a simple list, a list with notes, or a link. Delete hides a built-in pill and keeps what is inside it. Items inside a pill still change by holding them, or by swiping left. None of these pills have their own color. When the phone is online, the app loads the newest copy and refreshes itself; with no signal it still opens the saved copy. Not on `main` yet.
+
 ## 2026-10-12
 
 - **9:10 PM CT — v44: Save to Photos in the photo editor** (Claude, `testing` branch)
