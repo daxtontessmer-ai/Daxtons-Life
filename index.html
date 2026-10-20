@@ -244,13 +244,30 @@
                 padding:16px; text-align:center; font-size:14px; font-weight:600; color:var(--ink); border:1.5px dashed rgba(244,241,234,.45);
                 border-radius:18px; background:rgba(16,16,16,.85); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
     .drop-top.drop-on { border-color:#7fd18b; background:rgba(40,70,45,.9); }
-    .kind-pick { display:flex; gap:8px; margin-top:10px; }
-    .kind-pick button { flex:1; font:inherit; font-size:13px; font-weight:600; color:var(--ink); border:1px solid rgba(244,241,234,.22); border-radius:14px;
+    .kind-pick { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .kind-pick button { flex:1 1 30%; min-height:44px; font:inherit; font-size:13px; font-weight:600; color:var(--ink); border:1px solid rgba(244,241,234,.22); border-radius:14px;
                         padding:9px 10px; background:rgba(244,241,234,.05); cursor:pointer; text-align:left; }
     .kind-pick button small { display:block; font-weight:400; font-size:11px; color:var(--dim); margin-top:2px; }
     .kind-pick button[aria-pressed="true"] { border-color:var(--ink); background:rgba(244,241,234,.16); }
     .plus-tip { font-size:12px; color:var(--dim); margin:10px 2px 0; line-height:1.4; }
-    .pill-tools { display:flex; justify-content:flex-end; gap:6px; margin-top:12px; }
+    .pill-tools { display:flex; justify-content:flex-end; gap:6px; margin:4px 2px 10px; }
+    .pill-edit { min-height:44px; font-size:15px; font-weight:650; padding:8px 2px; }
+    .pill-wrap { display:inline-flex; align-items:stretch; max-width:100%; }
+    .pill-wrap > .pill { border-top-right-radius:14px; border-bottom-right-radius:14px; }
+    .pill-gear, .link-edit { flex:none; min-width:44px; min-height:44px; border:1px solid rgba(244,241,234,.22); background:rgba(20,20,20,.55);
+      color:var(--ink); font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+    .pill-gear { margin-left:-1px; padding:0 12px; border-radius:0 999px 999px 0; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
+    .link-row { display:flex; align-items:center; gap:8px; }
+    .link-row .link-pill { flex:1; min-width:0; }
+    .link-edit { border-radius:999px; padding:0 14px; background:rgba(244,241,234,.08); }
+    .link-url, .field input { width:100%; font:inherit; font-size:16px; font-weight:500; letter-spacing:0; text-transform:none; color:var(--ink);
+      background:rgba(244,241,234,.08); border:1px solid rgba(244,241,234,.16); border-radius:14px; padding:12px 14px; min-height:44px; }
+    .link-url { margin-top:8px; border-radius:999px; }
+    .field { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--dim); }
+    .add-link { min-height:44px; margin-top:8px; }
+    .hidden-pills { display:flex; flex-direction:column; align-items:flex-start; gap:4px; margin-top:8px; }
+    .hidden-pills .rm { min-height:44px; font-size:15px; }
+    .sheet-actions .add { min-height:44px; padding:0 18px; }
     .todo-row { display:flex; align-items:center; gap:8px; }
     .todo-row .pill { flex:1; min-width:0; }
     .todo-toggle { flex:none; border:1px solid rgba(244,241,234,.24); border-radius:999px; padding:7px 10px; background:rgba(244,241,234,.06); color:var(--ink); font:inherit; font-size:11px; font-weight:700; cursor:pointer; }
@@ -297,6 +314,26 @@
         <button class="rm" type="button" id="syncClose">Close</button>
       </div>
     </div>
+  </div>
+  <div class="sheet" id="pillSheet" hidden>
+    <form class="sheet-card" id="pillForm">
+      <h2 id="pillSheetTitle">Edit pill</h2>
+      <label class="field">Name
+        <input id="pillName" maxlength="40" autocomplete="off" enterkeyhint="done">
+      </label>
+      <label class="field" id="pillSubWrap" hidden>Subtitle
+        <input id="pillSub" maxlength="80" autocomplete="off">
+      </label>
+      <label class="field" id="pillLinkWrap" hidden>Link
+        <input id="pillHref" type="text" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="https://">
+      </label>
+      <p class="sheet-msg" id="pillMsg"></p>
+      <div class="sheet-actions">
+        <button class="add" type="submit" id="pillSave">Save</button>
+        <button class="rm" type="button" id="pillCancel">Cancel</button>
+        <button class="rm danger pill-edit" type="button" id="pillDelete">Delete</button>
+      </div>
+    </form>
   </div>
   <script>
   (() => {
@@ -504,11 +541,11 @@
         if (added) saveLocal();
       }
       pillsBox.append(btn); panelsBox.append(panel);
-      if (cfg.custom) {   // your own pills: rename or delete from inside
-        const tools = el("div", "pill-tools"), ren = el("button", "rm", "Rename pill"), del = el("button", "rm danger", "Delete pill");
-        ren.type = del.type = "button"; tools.append(ren, del); panel.append(tools);
-        ren.onclick = () => renamePill(cfg.key); del.onclick = () => deletePill(cfg.key);
-      }
+      const tools = el("div", "pill-tools"), editPill = el("button", "rm pill-edit", "Edit pill");
+      editPill.type = "button";
+      editPill.onclick = () => openPillEdit({ kind: cfg.custom ? "custom" : "section", id: cfg.key, name: shownName(btn, cfg.title), hasLink:false, hasSub:false });
+      tools.append(editPill);
+      (cfg.flat && flatMeta ? flatMeta : form).after(tools);
 
       const sec = { key: cfg.key, btn, panel, render, close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } };
       btn.onclick = () => {
@@ -660,6 +697,7 @@
       }
 
       function render() {
+        if (applySectionChrome(cfg, btn, panel)) { count.textContent = ""; return; }
         const items = live().sort((a, b) => (a.created || 0) - (b.created || 0));
         count.textContent = cfg.steps ? (items.length ? items.filter(i => i.done).length + "/" + items.length : "") : cfg.done ? (items.filter(i => !i.done).length || "") : (items.length || "");
         if (cfg.steps && roadmapSummary) {
@@ -806,6 +844,10 @@
         + '<li>Done. Now “Set iPhone alarm” makes a real Clock alarm.</li></ol>'
         + '<p>Nothing happens? Open the app straight from your home screen (not inside Compare versions), and check the shortcut name matches exactly. To test the shortcut alone, open it in Shortcuts, tap ▶ and type <b>2026-10-12 16:30|Test</b>.</p>';
       const list = el("ul", "alarm-list"); actions.append(add, enable); form.append(name, at, actions); panel.append(form, setup, help, list);
+      const tools = el("div", "pill-tools"), editPill = el("button", "rm pill-edit", "Edit pill");
+      editPill.type = "button";
+      editPill.onclick = () => openPillEdit({ kind:"section", id:cfg.key, name: shownName(btn, cfg.title), hasLink:false, hasSub:false });
+      tools.append(editPill); form.after(tools);
       setup.querySelector(".test-link").addEventListener("click", e => {
         const d = new Date(Date.now() + 2 * 60000), pad = n => String(n).padStart(2, "0");
         const text = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + "|Daxton's Life test";
@@ -846,6 +888,7 @@
         const url = URL.createObjectURL(new Blob([ics], { type:"text/calendar;charset=utf-8" })), link = document.createElement("a"); link.href = url; link.download = item.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase() + ".ics"; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
       function render() {
+        if (applySectionChrome(cfg, btn, panel)) { count.textContent = ""; return; }
         const items = live(); count.textContent = items.filter(item => !item.firedAt).length || ""; list.replaceChildren();
         if (!items.length) list.append(el("li", "empty", cfg.empty));
         items.forEach(item => { const li = el("li", "alarm-card" + (item.firedAt ? " fired" : "")); li.append(el("strong", null, item.name)); const time = el("time", null, new Date(item.at).toLocaleString(undefined, { dateStyle:"medium", timeStyle:"short" })); time.dateTime = item.at; li.append(time); const row = el("div", "alarm-actions"), ph = phoneAlarmLink(item), cal = el("button", "rm", "Add to calendar"), remove = el("button", "rm danger", "Delete"); cal.type = remove.type = "button"; cal.onclick = () => calendar(item); remove.onclick = () => { item.deleted = true; item.updated = now(); changed(); }; row.append(ph, cal, remove); if (rung.has(item.id) || item.firedAt) li.append(el("span", "alarm-state", rung.has(item.id) ? "Rang on this device" : "Went off on another device")); li.append(row); list.append(li); fire(item); });
@@ -931,32 +974,7 @@
     if (window.visualViewport) visualViewport.addEventListener("resize", fitPanels);
     new MutationObserver(() => requestAnimationFrame(fitPanels)).observe($("rel"), { subtree:true, attributes:true, attributeFilter:["hidden"], childList:true });
 
-    // ---------- Daxton's Portfolio: looks like the other pills, tapping goes straight to Daxton's Way ----------
-    const pf = el("a", "pill");
-    pf.href = "https://daxtontessmer-ai.github.io/DaxtonTessmer/DaxtonWay4721_linktree.html";
-    pf.append(document.createTextNode("Daxton's Portfolio "));
-    pf.insertAdjacentHTML("beforeend", CHEV);
-    linkPills.append(pf);
-
-    // ---------- Shot List: dropdown with links to the Shot List app and its Trip Planner ----------
-    (() => {
-      const SL = "https://daxtontessmer-ai.github.io/shot-list/";
-      const btn = el("button", "pill"); btn.type = "button"; btn.setAttribute("aria-expanded", "false");
-      btn.append(document.createTextNode("Shot List ")); btn.insertAdjacentHTML("beforeend", CHEV);
-      const panel = el("div", "panel"); panel.hidden = true;
-      const ul = el("ul", "links-list");
-      [["Shot List", SL, "Every video and shot to film"], ["Trip Finder", SL + "trip-finder.html", "Answer together and find your kind of trip"], ["Trip Planner", SL + "trip.html", "All the questions to plan a trip with friends"]].forEach(([t, href, sub]) => {
-        const li = el("li"), a = el("a", "link-pill"); a.href = href;
-        const txt = el("span", "lp-text"); txt.append(el("span", "lp-t", t), el("span", "lp-s", sub));
-        a.append(txt); a.insertAdjacentHTML("beforeend", '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>');
-        li.append(a); ul.append(li);
-      });
-      panel.append(ul);
-      linkPills.append(btn); linkPanels.append(panel);
-      const sec = { render(){}, close() { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); } };
-      btn.onclick = () => { const opening = panel.hidden; all.forEach(o => o.close()); if (opening) { panel.hidden = false; btn.setAttribute("aria-expanded", "true"); } };
-      all.push(sec);
-    })();
+    // Link pills (Portfolio, Shot List) are drawn from saved data further down, so they can be edited.
     // ---------- Compare versions: Main, Testing and Beta side by side (tabs on a phone) ----------
     (() => {
       const V = [
@@ -1030,14 +1048,9 @@
     const cfgFor = d => d.kind === "notes"
       ? { key:d.id, title:d.name, custom:true, addPh:"Add an item", notePh:"A note or thing to remember", rmLabel:"Remove", empty:"Nothing yet. Add your first one above." }
       : { key:d.id, title:d.name, custom:true, addPh:"Add to " + d.name, flat:true, empty:"Nothing yet. Add your first one above." };
-    function renamePill(key) {
+    function deletePill(key, skipConfirm) {
       const d = sect("custompills").find(x => x.id === key); if (!d) return;
-      const v = (prompt("Rename this pill", d.name) || "").trim().replace(/\s+/g, " ").slice(0, 40);
-      if (v && v !== d.name) { d.name = v; d.updated = now(); changed(); }
-    }
-    function deletePill(key) {
-      const d = sect("custompills").find(x => x.id === key); if (!d) return;
-      if (!confirm('Delete the "' + d.name + '" pill and everything in it?')) return;
+      if (!skipConfirm && !confirm('Delete the "' + d.name + '" pill and everything in it?')) return;
       const up = nestOf(key);   // pills that were inside it move up one level
       sect("pillnest").forEach(r => { if (r.parent === key) { r.parent = up; r.updated = now(); } });
       d.deleted = true; d.updated = now(); changed();
@@ -1058,6 +1071,7 @@
       if (!o.sub) { const box = el("div", "sub-box"), pills = el("div", "pills"), panels = el("div"); box.append(pills, panels); o.panel.prepend(box); o.sub = { box, pills, panels }; }
       return o.sub;
     }
+    let hiddenHost = null;
     // The + pill: make a pill of your own
     const plusBtn = el("button", "pill pill-plus", "+"); plusBtn.type = "button"; plusBtn.setAttribute("aria-label", "Add a pill"); plusBtn.setAttribute("aria-expanded", "false");
     const plusPanel = el("div", "panel"); plusPanel.hidden = true;
@@ -1066,16 +1080,25 @@
       inp.placeholder = "Name your new pill"; inp.maxLength = 40; inp.autocomplete = "off"; go.type = "submit";
       f.append(inp, go);
       let kind = "flat";
+      const linkIn = el("input"); linkIn.className = "link-url"; linkIn.hidden = true; linkIn.placeholder = "Link (https://…)";
+      linkIn.type = "text"; linkIn.inputMode = "url"; linkIn.autocapitalize = "off"; linkIn.autocomplete = "off"; linkIn.spellcheck = false;
       const pick = el("div", "kind-pick");
       const opt = (k, t, sub) => { const b = el("button"); b.type = "button"; b.append(document.createTextNode(t), el("small", null, sub));
-        b.onclick = () => { kind = k; pick.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); }; b.setAttribute("aria-pressed", k === kind); return b; };
-      pick.append(opt("flat", "Simple list", "Like Lessons"), opt("notes", "List with notes", "Like Work"));
-      const tip = el("p", "plus-tip", "Tip: hold any pill for a moment, then drag it onto another pill to put it inside. Drag it to the bar at the bottom to bring it back out.");
-      plusPanel.append(f, pick, tip);
-      const upd = () => { go.disabled = !inp.value.trim(); }; inp.oninput = upd; upd();
+        b.onclick = () => { kind = k; linkIn.hidden = k !== "link"; pick.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); upd(); }; b.setAttribute("aria-pressed", k === kind); return b; };
+      pick.append(opt("flat", "Simple list", "Like Lessons"), opt("notes", "List with notes", "Like Work"), opt("link", "Link", "Opens a page"));
+      const tip = el("p", "plus-tip", "Open a pill and tap Edit pill to rename it, or to change a link. Hold a pill, then drag it onto another pill to put it inside. Drag it to the bar at the bottom to bring it back out.");
+      hiddenHost = el("div");
+      plusPanel.append(f, linkIn, pick, tip, hiddenHost);
+      const upd = () => { go.disabled = !inp.value.trim() || (kind === "link" && !linkIn.value.trim()); }; inp.oninput = upd; linkIn.oninput = upd; upd();
       f.onsubmit = e => {
         e.preventDefault();
         const v = inp.value.trim().replace(/\s+/g, " "); if (!v) return;
+        if (kind === "link") {
+          const href = tidyUrl(linkIn.value); if (!href) return;
+          sect("linkpills").push({ id:"lp-" + now().toString(36) + Math.random().toString(36).slice(2, 6), name:v, href, sub:"", group:"links", direct:true, created:now(), updated:now() });
+          inp.value = ""; linkIn.value = ""; upd(); changed();
+          return;
+        }
         const id = "cp-" + now().toString(36) + Math.random().toString(36).slice(2, 6);
         sect("custompills").push({ id, name:v, kind, created:now(), updated:now() }); sect(id);
         inp.value = ""; upd(); changed();
@@ -1089,7 +1112,8 @@
       const secs = all.filter(o => o.key), byKey = Object.fromEntries(secs.map(o => [o.key, o]));
       for (const o of secs) {
         let p = nestOf(o.key);
-        if (p && (!byKey[p] || p === o.key || descends(p, o.key))) p = null;   // missing parent or a loop: show it on the main list
+        const parentMeta = p && (data.sections.pilltitles || []).find(i => i.id === p);
+        if (p && (!byKey[p] || p === o.key || descends(p, o.key) || (parentMeta && parentMeta.deleted))) p = null;   // missing parent, a loop, or a hidden pill: show it on the main list
         const host = p ? subOf(byKey[p]) : null;
         const pb = host ? host.pills : pillsBox, pp = host ? host.panels : panelsBox;
         if (o.btn.parentNode !== pb) pb.append(o.btn);   // only move what changed, so typing in an open pill isn't interrupted
@@ -1147,7 +1171,185 @@
     document.addEventListener("pointerup", e => endDrag(e, true));
     document.addEventListener("pointercancel", e => endDrag(e, false));
 
-    function renderAll() { ensureCustom(); layout(); all.forEach(s => s.render()); }
+    // ---------- Touch editor for every home-screen pill ----------
+    // Section pills keep a title override in "pilltitles". Link pills (Portfolio, Shot List items, ones you add) live in "linkpills".
+    // Both sync with everything else. Nothing here has its own color.
+    let pillEdit = null, pillDelArmed = false;
+    function shownName(btn, fallback) {
+      const t = btn.firstChild && btn.firstChild.nodeType === 3 ? btn.firstChild.textContent : fallback;
+      return (t || fallback || "").trim();
+    }
+    function tidyUrl(v) {
+      v = (v || "").trim();
+      if (!v) return "";
+      if (/^(https?:|mailto:|shortcuts:)/i.test(v)) return v;
+      if (v.startsWith("./") || v.startsWith("../") || v.startsWith("/") || /^[\w.-]+\.html([?#]|$)/.test(v)) return v;
+      return "https://" + v;
+    }
+    function applySectionChrome(cfg, btn, panel) {
+      if (cfg.custom) {
+        const d = (data.sections.custompills || []).find(x => x.id === cfg.key && !x.deleted);
+        const name = d ? d.name : cfg.title;
+        if (btn.firstChild && btn.firstChild.nodeType === 3 && btn.firstChild.textContent !== name + " ") btn.firstChild.textContent = name + " ";
+        return false;
+      }
+      const m = (data.sections.pilltitles || []).find(i => i.id === cfg.key);
+      if (m && m.deleted) { btn.hidden = true; panel.hidden = true; btn.setAttribute("aria-expanded", "false"); return true; }
+      btn.hidden = false;
+      const name = (m && m.name) || cfg.title;
+      if (btn.firstChild && btn.firstChild.nodeType === 3 && btn.firstChild.textContent !== name + " ") btn.firstChild.textContent = name + " ";
+      return false;
+    }
+    function openPillEdit(spec) {
+      pillEdit = spec; pillDelArmed = false;
+      $("pillSheetTitle").textContent = spec.creating ? "New pill" : "Edit pill";
+      $("pillName").value = spec.name || "";
+      $("pillSub").value = spec.sub || "";
+      $("pillHref").value = spec.href || "";
+      $("pillSubWrap").hidden = !spec.hasSub;
+      $("pillLinkWrap").hidden = !spec.hasLink;
+      $("pillDelete").hidden = !!spec.creating;
+      $("pillDelete").textContent = "Delete";
+      $("pillSave").textContent = spec.creating ? "Add" : "Save";
+      $("pillMsg").textContent = spec.kind === "section" || spec.kind === "menu" ? "Deleting hides this pill and keeps what is inside it. Bring it back from the + pill." : "";
+      $("pillSheet").hidden = false;
+      setTimeout(() => { const i = $("pillName"); i.focus(); try { i.setSelectionRange(i.value.length, i.value.length); } catch (e) {} }, 60);
+    }
+    function closePillEdit() { $("pillSheet").hidden = true; pillEdit = null; pillDelArmed = false; }
+    function savePillEdit(e) {
+      e.preventDefault();
+      const spec = pillEdit; if (!spec) return;
+      const name = $("pillName").value.trim().replace(/\s+/g, " ").slice(0, 40);
+      if (!name) { $("pillMsg").textContent = "Give the pill a name."; return; }
+      if (spec.hasLink || spec.kind === "link") {
+        const href = tidyUrl($("pillHref").value);
+        if (!href) { $("pillMsg").textContent = "Add a link."; return; }
+        const sub = spec.hasSub ? $("pillSub").value.trim().replace(/\s+/g, " ").slice(0, 80) : (spec.sub || "");
+        const list = sect("linkpills");
+        let r = spec.id && list.find(i => i.id === spec.id);
+        if (!r) {
+          r = { id: spec.id || ("lp-" + now().toString(36) + Math.random().toString(36).slice(2, 6)), created: now(), group: spec.group || "links", direct: !!spec.direct };
+          list.push(r);
+        }
+        r.name = name; r.href = href; r.sub = sub; r.group = spec.group || r.group || "links";
+        r.direct = spec.direct != null ? !!spec.direct : !!r.direct;
+        r.deleted = false; r.updated = now();
+        changed(); closePillEdit(); return;
+      }
+      if (spec.kind === "custom") {
+        const d = sect("custompills").find(x => x.id === spec.id);
+        if (d) { d.name = name; d.updated = now(); changed(); }
+        closePillEdit(); return;
+      }
+      const list = sect("pilltitles");
+      let r = list.find(i => i.id === spec.id);
+      if (!r) { r = { id: spec.id, created: now() }; list.push(r); }
+      r.name = name; r.deleted = false; r.updated = now();
+      changed(); closePillEdit();
+    }
+    function deletePillEdit() {
+      const spec = pillEdit; if (!spec) return;
+      if (!pillDelArmed) {
+        pillDelArmed = true;
+        $("pillDelete").textContent = "Tap again to delete";
+        $("pillMsg").textContent = spec.kind === "custom" || spec.kind === "link" ? "Tap again to delete this pill." : "Tap again to hide this pill. What is inside it stays saved.";
+        return;
+      }
+      if (spec.kind === "custom") { const id = spec.id; closePillEdit(); deletePill(id, true); return; }
+      if (spec.kind === "link") {
+        const r = sect("linkpills").find(i => i.id === spec.id);
+        if (r) { r.deleted = true; r.updated = now(); changed(); }
+        closePillEdit(); return;
+      }
+      const list = sect("pilltitles");
+      let r = list.find(i => i.id === spec.id);
+      if (!r) { r = { id: spec.id, name: spec.name || "", created: now() }; list.push(r); }
+      r.deleted = true; r.updated = now();
+      changed(); closePillEdit();
+    }
+    $("pillForm").onsubmit = savePillEdit;
+    $("pillCancel").onclick = () => closePillEdit();
+    $("pillDelete").onclick = () => deletePillEdit();
+    $("pillSheet").onclick = e => { if (e.target.id === "pillSheet") closePillEdit(); };
+
+    function seedLinkPills() {
+      const list = sect("linkpills");
+      const SL = "https://daxtontessmer-ai.github.io/shot-list/";
+      const seeds = [
+        { id:"lp-portfolio", name:"Daxton's Portfolio", href:"https://daxtontessmer-ai.github.io/DaxtonTessmer/DaxtonWay4721_linktree.html", group:"links", direct:true },
+        { id:"lp-shot", name:"Shot List", href:SL, sub:"Every video and shot to film", group:"shot" },
+        { id:"lp-finder", name:"Trip Finder", href:SL + "trip-finder.html", sub:"Answer together and find your kind of trip", group:"shot" },
+        { id:"lp-planner", name:"Trip Planner", href:SL + "trip.html", sub:"All the questions to plan a trip with friends", group:"shot" }
+      ];
+      let added = false;
+      seeds.forEach(s => { if (!list.some(i => i.id === s.id)) { list.push({ ...s, created:1, updated:1 }); added = true; } });
+      const titles = sect("pilltitles");
+      if (!titles.some(i => i.id === "shotlist")) { titles.push({ id:"shotlist", name:"Shot List", created:1, updated:1 }); added = true; }
+      if (added) saveLocal();
+    }
+    const shotBtn = el("button", "pill"); shotBtn.type = "button"; shotBtn.setAttribute("aria-expanded", "false");
+    shotBtn.append(document.createTextNode("Shot List ")); shotBtn.insertAdjacentHTML("beforeend", CHEV);
+    const shotPanel = el("div", "panel"); shotPanel.hidden = true;
+    const shotList = el("ul", "links-list");
+    const shotTools = el("div", "pill-tools"), shotEdit = el("button", "rm pill-edit", "Edit pill"), shotAdd = el("button", "add add-link", "Add a link");
+    shotEdit.type = shotAdd.type = "button";
+    shotEdit.onclick = () => openPillEdit({ kind:"menu", id:"shotlist", name: shownName(shotBtn, "Shot List"), hasLink:false, hasSub:false });
+    shotAdd.onclick = () => openPillEdit({ kind:"link", creating:true, group:"shot", direct:false, hasLink:true, hasSub:true, name:"", href:"https://", sub:"" });
+    shotTools.append(shotEdit); shotPanel.append(shotTools, shotList, shotAdd); linkPanels.append(shotPanel);
+    const shotSec = { panel: shotPanel, render(){}, close() { shotPanel.hidden = true; shotBtn.setAttribute("aria-expanded", "false"); } };
+    shotBtn.onclick = () => { const opening = shotPanel.hidden; closeOthers(shotBtn); if (opening) { shotPanel.hidden = false; shotBtn.setAttribute("aria-expanded", "true"); } };
+    all.push(shotSec);
+    (() => {
+      const cmp = [...linkPills.children].find(n => n.tagName === "BUTTON" && (n.textContent || "").includes("Compare versions"));
+      linkPills.insertBefore(shotBtn, cmp || null);
+    })();
+    function linkRow(item, withSub) {
+      const a = el("a", withSub ? "link-pill" : "pill"); a.href = item.href || "#";
+      if (withSub) {
+        const txt = el("span", "lp-text"); txt.append(el("span", "lp-t", item.name), el("span", "lp-s", item.sub || ""));
+        a.append(txt);
+        a.insertAdjacentHTML("beforeend", '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>');
+      } else { a.append(document.createTextNode(item.name + " ")); a.insertAdjacentHTML("beforeend", CHEV); }
+      const gear = el("button", withSub ? "link-edit" : "pill-gear", "Edit"); gear.type = "button";
+      gear.setAttribute("aria-label", "Edit " + item.name);
+      gear.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); openPillEdit({ kind:"link", id:item.id, name:item.name, href:item.href, sub:item.sub || "", hasLink:true, hasSub:!!withSub, group:item.group, direct:!!item.direct }); };
+      if (withSub) { const li = el("li", "link-row"); li.append(a, gear); return li; }
+      const wrap = el("span", "pill-wrap"); wrap.append(a, gear); return wrap;
+    }
+    function renderLinks() {
+      linkPills.querySelectorAll(".pill-wrap").forEach(n => n.remove());
+      const live = (data.sections.linkpills || []).filter(i => i && !i.deleted);
+      live.filter(i => i.direct && i.group === "links").sort((a, b) => (a.created || 0) - (b.created || 0)).forEach(item => linkPills.insertBefore(linkRow(item, false), shotBtn));
+      const title = (data.sections.pilltitles || []).find(i => i.id === "shotlist");
+      const hidden = !!(title && title.deleted);
+      shotBtn.hidden = hidden;
+      if (hidden) { shotPanel.hidden = true; shotBtn.setAttribute("aria-expanded", "false"); }
+      const name = (title && title.name) || "Shot List";
+      if (shotBtn.firstChild && shotBtn.firstChild.nodeType === 3 && shotBtn.firstChild.textContent !== name + " ") shotBtn.firstChild.textContent = name + " ";
+      shotList.replaceChildren();
+      live.filter(i => i.group === "shot").sort((a, b) => (a.created || 0) - (b.created || 0)).forEach(item => shotList.append(linkRow(item, true)));
+    }
+    function fillHidden() {
+      if (!hiddenHost) return;
+      hiddenHost.replaceChildren();
+      const items = [];
+      SECTIONS.forEach(c => { const m = (data.sections.pilltitles || []).find(i => i.id === c.key); if (m && m.deleted) items.push({ label: m.name || c.title, rec: m }); });
+      const shot = (data.sections.pilltitles || []).find(i => i.id === "shotlist");
+      if (shot && shot.deleted) items.push({ label: shot.name || "Shot List", rec: shot });
+      (data.sections.linkpills || []).filter(i => i.deleted).forEach(i => items.push({ label: i.name || "Link", rec: i }));
+      if (!items.length) return;
+      hiddenHost.append(el("p", "plus-tip", "Hidden pills — tap one to bring it back."));
+      const row = el("div", "hidden-pills");
+      items.forEach(it => {
+        const b = el("button", "rm", "Bring back " + it.label); b.type = "button";
+        b.onclick = () => { it.rec.deleted = false; it.rec.updated = now(); changed(); };
+        row.append(b);
+      });
+      hiddenHost.append(row);
+    }
+
+    function renderAll() { ensureCustom(); layout(); renderLinks(); fillHidden(); all.forEach(s => s.render()); }
+    seedLinkPills();
     renderAll();
     setStatus(token ? "syncing" : "off");
     sync();
@@ -1163,15 +1365,22 @@
   document.getElementById("day").textContent =
     new Date().toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
-    // A newer version was found in the background: offer a one-tap refresh
+    let reloading = false;
+    const hadController = !!navigator.serviceWorker.controller;
+    const reloadOnce = () => { if (reloading) return; reloading = true; location.reload(); };
+    // A newly activated service worker takes over on its own. The button is only a backup.
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadController) reloadOnce(); });
     navigator.serviceWorker.addEventListener("message", e => {
+      if (e.data === "reload") { reloadOnce(); return; }
       if (e.data !== "update-ready" || document.querySelector(".update")) return;
       const b = document.createElement("button");
       b.className = "update"; b.textContent = "New version ready · Tap to refresh";
       b.onclick = () => location.reload();
       document.body.append(b);
     });
+    navigator.serviceWorker.register("sw.js").then(reg => {
+      document.addEventListener("visibilitychange", () => { if (!document.hidden && reg.update) reg.update(); });
+    }).catch(() => {});
     if (navigator.serviceWorker.startMessages) navigator.serviceWorker.startMessages();
   }
 </script>
