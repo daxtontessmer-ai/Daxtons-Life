@@ -1,5 +1,5 @@
 // Keeps the app fast and working with no signal. Bump VERSION whenever files change.
-const VERSION = "v47";
+const VERSION = "v48";
 const FILES = ["./", "index.html", "manifest.webmanifest", "img/daxton.jpg", "img/icon-180.png"];
 
 self.addEventListener("install", e => {
@@ -28,6 +28,7 @@ self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
   const url = new URL(e.request.url);
   if (url.origin !== self.location.origin) return; // never touch GitHub sync calls
+  if (url.pathname.endsWith("/sw.js")) return; // let the browser fetch this file itself so an update is never a stale copy
   if (e.request.mode === "navigate" && /\.html$/.test(url.pathname) && !/index\.html$/.test(url.pathname)) return;
   const isPage = e.request.mode === "navigate";
   if (isPage) {

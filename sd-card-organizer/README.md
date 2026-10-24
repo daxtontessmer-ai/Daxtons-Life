@@ -24,8 +24,8 @@ Deleting files from the SD card is a separate button. It shows a summary first. 
 ## Start it
 
 1. Plug the SD card and the hard drive into the MacBook.
-2. Open the `sd-card-organizer` folder inside Daxton's Life.
-3. Double-click **Organize SD Card.command**.
+2. In Finder, open **Applications**, then the folder **sd-card-organizer**.
+3. Double-click **Organize SD Card.command**. That file is `~/Applications/sd-card-organizer/Organize SD Card.command`.
 4. Safari opens a page called Organize SD card. Leave the Terminal window open until you are done. Closing it stops the organizer.
 
 The first time, the Mac may say the file can't be opened because it came from the internet. Control-click **Organize SD Card.command**, choose **Open**, then click **Open** again.
@@ -51,4 +51,4 @@ Unplug the card from the Finder eject button when you are finished, the same as 
 
 ## If you opened it from Daxton's Life
 
-The Organize SD card button only opens this page when the helper is already running on that Mac. On the iPhone, or when the helper is not running, the app stays on Daxton's Life and shows these steps. It does not send you to an error page. The phone cannot copy to a drive that is plugged into the Mac.
+The SD Organizer pill only opens this page when the helper is already running on that Mac. On the iPhone, or when the helper is not running, the app stays on Daxton's Life and shows these steps. It does not send you to an error page. The phone cannot copy to a drive that is plugged into the Mac.
