@@ -1,5 +1,5 @@
 // Keeps the app working with no signal. Bump VERSION whenever files change.
-const VERSION = "v7";
+const VERSION = "v8";
 const FILES = ["./", "index.html", "manifest.webmanifest", "img/daxton.jpg", "img/icon-180.png", "img/icon-192.png", "img/icon-512.png"];
 
 self.addEventListener("install", e => {
@@ -26,6 +26,7 @@ self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
   const url = new URL(e.request.url);
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.endsWith("/sw.js")) return; // let the browser fetch this file itself so an update is never a stale copy
   const isPage = e.request.mode === "navigate";
   if (isPage) {
     e.respondWith((async () => {

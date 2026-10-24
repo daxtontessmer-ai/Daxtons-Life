@@ -189,12 +189,12 @@
 
     // Organize SD card runs on the MacBook. Never navigate to localhost unless it just answered.
     const ORGANIZER = "http://127.0.0.1:8765/";
-    const orgName = () => extra.orgTitle || "Organize SD card";
+    const orgName = () => (!extra.orgTitle || extra.orgTitle === "Organize SD card") ? "SD Organizer" : extra.orgTitle;
     const orgSheet = el("div", "sheet"); orgSheet.hidden = true; orgSheet.id = "orgSheet";
     const orgCard = el("div", "sheet-card"); orgCard.setAttribute("role", "dialog"); orgCard.setAttribute("aria-labelledby", "orgTitle");
     const orgTitle = el("h2", null, "This runs on your MacBook"); orgTitle.id = "orgTitle";
     const orgWhy = el("p"), orgHow = el("p"), orgWhere = el("p");
-    orgHow.innerHTML = "<b>How to start it on the MacBook</b><br>1. Plug the SD card and the hard drive into the MacBook.<br>2. Open the Daxton's Life folder, then <b>sd-card-organizer</b>.<br>3. Double-click <b>Organize SD Card.command</b>.<br>4. If the Mac says it can't be opened, Control-click it and choose Open.<br>Leave that window open while it copies. Then tap Organize SD card again.";
+    orgHow.innerHTML = "<b>How to start it on the MacBook</b><br>1. Plug the SD card and the hard drive into the MacBook.<br>2. In Finder, open <b>Applications</b>, then the folder <b>sd-card-organizer</b>.<br>3. Double-click <b>Organize SD Card.command</b>.<br>The file is <b>~/Applications/sd-card-organizer/Organize SD Card.command</b>.<br>4. If the Mac says it can't be opened, Control-click it and choose Open.<br>Leave that window open while it copies. Then tap SD Organizer again.";
     orgWhere.innerHTML = "<b>Where the files go</b><br>Hard drive / Sony / YYYY-MM-DD / Photos / Vertical<br>Hard drive / Sony / YYYY-MM-DD / Photos / Horizontal<br>Hard drive / Sony / YYYY-MM-DD / Videos / Vertical<br>Hard drive / Sony / YYYY-MM-DD / Videos / Horizontal<br>A taller photo or video goes in Vertical. A square goes in Horizontal. This copy only works on the Mac, not the iPhone.";
     const orgActions = el("div", "sheet-actions");
     const orgOpen = el("button", "add", "Open the organizer");
@@ -217,7 +217,7 @@
         ? "You're on the iPhone. This only works on the MacBook. The iPhone can't see an SD card or hard drive plugged into the Mac, so this stays here instead of opening an error page."
         : (running
           ? "The organizer is running on this Mac."
-          : "The organizer isn't running, so this stayed on Daxton's Life instead of opening an error page. Start it on the MacBook with the steps below, then tap Organize SD card again. It does not work on the iPhone.");
+          : "The organizer isn't running, so this stayed on Daxton's Life instead of opening an error page. Start it on the MacBook with the steps below, then tap SD Organizer again. It does not work on the iPhone.");
       closePillEdit();
       orgSheet.hidden = false;
     }
@@ -334,13 +334,14 @@
         wrap.append(a, gear); pills.append(wrap);
       });
       if (!extra.orgHidden) {
-        const wrap = el("span", "pill-wrap"), btn = el("button", "pill"); btn.type = "button";
+        const wrap = el("span", "pill-wrap sd-organizer"), btn = el("button", "pill"); btn.type = "button";
         btn.append(document.createTextNode(orgName() + " "));
         btn.insertAdjacentHTML("beforeend", '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>');
         btn.onclick = () => openOrganizer();
         const gear = el("button", "pill-gear", "Edit"); gear.type = "button"; gear.setAttribute("aria-label", "Edit " + orgName());
         gear.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); orgSheet.hidden = true; openPillEdit({ kind:"org", name:orgName() }); };
-        wrap.append(btn, gear); pills.append(wrap);
+        wrap.append(btn, gear);
+        pills.insertBefore(wrap, pills.firstChild);
       }
       const plus = el("button", "pill pill-plus", "+"); plus.type = "button"; plus.setAttribute("aria-label", "Add a pill");
       const plusPanel = el("div", "panel"); plusPanel.hidden = true; plusPanel.dataset.key = "plus";
@@ -401,6 +402,7 @@
     navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadController) reloadOnce(); });
     navigator.serviceWorker.addEventListener("message", e => { if (e.data === "reload") reloadOnce(); });
     navigator.serviceWorker.register("sw.js").then(reg => {
+      if (reg.update) reg.update();
       document.addEventListener("visibilitychange", () => { if (!document.hidden && reg.update) reg.update(); });
     }).catch(() => {});
   }
