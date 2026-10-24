@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-24
 
+- **4:25 PM CT — v52: adding something keeps you at the top of the pill** (Claude, `main`)
+  In every pill (Venture, Work, School, Just dos, Relationships, and the rest), adding an entry no longer jumps you to the bottom to open its notes. You stay on the add box with the keyboard up, so you can see what you type and add the next one. Tap an entry to add notes to it. Opening the keyboard also no longer shifts the dropdown.
+
 - **4:15 PM CT — v51: scrolling works with a pill open, Up/Down buttons gone** (Claude, `main`)
   Opening a pill no longer locks the screen: you can scroll the dropdown and back up to the pills again. Removed the ↑ Up and ↓ Down buttons from inside the Relationships pill (hold-and-drag still reorders people).
 

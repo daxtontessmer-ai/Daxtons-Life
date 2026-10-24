@@ -669,7 +669,10 @@
         if (cfg.key === "rel") {
           (data.sections.relationshipplacement ||= []).push({ id, group:relationshipGroup, order:Math.max(-1, ...live().filter(p => p.id !== id && groupFor(p.id) === relationshipGroup).map(p => placement(p.id)?.order ?? p.created ?? 0)) + 1, updated:now() });
         }
-        open.add(id); focusId = id; changed();
+        // Stay at the top on the add box so you can keep typing; the new entry shows in the list (tap it to add notes)
+        changed(); input.focus();
+        requestAnimationFrame(() => { const rel = $("rel"), rt = rel.getBoundingClientRect().top, ft = form.getBoundingClientRect().top;
+          if (ft < rt || ft > rt + 200) rel.scrollTop += ft - rt - 56; });
       };
       const setNotes = (it, notes, dates) => {
         it.notes = notes;
@@ -1084,7 +1087,7 @@
     // near the top (one row of pills still showing above it), then the dropdown takes the rest.
     const ABOVE = 56, seenOpen = new WeakSet();
     function fitPanels() {
-      const rel = $("rel"), vh = (window.visualViewport ? window.visualViewport.height : innerHeight);
+      const rel = $("rel"), vh = innerHeight;   // not the keyboard-shrunk height, so opening the keyboard doesn't shift the dropdown
       const relTop = rel.getBoundingClientRect().top;
       let newlyOpened = null, anyOpen = false;
       document.querySelectorAll(".rel .panel").forEach(pn => {

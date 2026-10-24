@@ -1,5 +1,5 @@
 // Keeps the app fast and working with no signal. Bump VERSION whenever files change.
-const VERSION = "v51-scroll-fix-no-up-down";
+const VERSION = "v52-stay-on-add-box";
 const FILES = ["./", "index.html", "manifest.webmanifest", "img/daxton.jpg", "img/icon-180.png"];
 
 self.addEventListener("install", e => {
