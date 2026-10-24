@@ -2,13 +2,23 @@
 
 This copies photos and videos off the Sony a6400 SD card onto a hard drive, on the MacBook. The iPhone cannot see drives that are plugged into the Mac, so this runs on the Mac only.
 
-Each day the pictures were taken gets its own folder, then Vertical or Horizontal:
+A day with 24 or more photos and videos gets its own folder. A day with fewer than 24 shares one folder, Other Days. You can change 24 on the page. Photos and videos count. The small Sony notes next to a video do not.
+
+Dates from October 15, 2026 through October 22, 2026 go under a trip folder named Tetons. You can change the name and the dates. A Tetons day with fewer than 24 photos and videos goes in Tetons / Other Days. A Tetons day with 24 or more keeps its own day folder inside Tetons.
 
 ```text
 Hard Drive / Sony / 2024-03-15 / Photos / Vertical
 Hard Drive / Sony / 2024-03-15 / Photos / Horizontal
 Hard Drive / Sony / 2024-03-15 / Videos / Vertical
 Hard Drive / Sony / 2024-03-15 / Videos / Horizontal
+Hard Drive / Sony / Other Days / Photos / Vertical
+Hard Drive / Sony / Other Days / Photos / Horizontal
+Hard Drive / Sony / Other Days / Videos / Vertical
+Hard Drive / Sony / Other Days / Videos / Horizontal
+Hard Drive / Sony / Tetons / 2026-10-16 / Photos / Vertical
+Hard Drive / Sony / Tetons / 2026-10-16 / Videos / Horizontal
+Hard Drive / Sony / Tetons / Other Days / Photos / Horizontal
+Hard Drive / Sony / Tetons / Other Days / Videos / Vertical
 ```
 
 `Sony` is the folder name you type. You can change it. A picture that is taller than it is wide, after the camera's rotation, goes in `Vertical`. A landscape or a square goes in `Horizontal`. The small Sony `.XML` and `.THM` files that belong to a video sit in that video's folder, next to the video.
@@ -36,8 +46,8 @@ If the Mac says Python 3 is needed, click Install on the command line tools wind
 
 1. Click the SD card under **SD card**.
 2. Click the hard drive under **Hard drive**. The Mac's internal disk is shown but can't be picked.
-3. Leave the folder name as `Sony`, or type another name.
-4. Click **Look at the card** to see the days and how many photos and videos there are.
+3. Leave the folder name as `Sony`, or type another name. Leave the day size at 24 and the trip as Tetons, October 15 through October 22, 2026, unless this card should use something else.
+4. Click **Look at the card**. Each day shows the folder it will use.
 5. Click **Copy to the hard drive** and wait. Large 4K videos are copied in pieces, so the page stays responsive.
 6. When it says Done, the files are on the drive and each one was checked.
 

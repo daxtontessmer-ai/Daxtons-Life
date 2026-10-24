@@ -23,7 +23,7 @@
   .vol span { color:var(--dim); font-size:13px; }
   .vol[aria-pressed="true"] { border-color:var(--ink); background:rgba(244,241,234,.14); }
   .vol:disabled { opacity:.45; cursor:not-allowed; }
-  label { display:block; font-size:13px; color:var(--dim); margin-bottom:6px; }
+  label { display:block; font-size:13px; color:var(--dim); margin:12px 0 6px; }
   input { width:100%; font:inherit; font-size:18px; color:var(--ink); background:rgba(244,241,234,.06); border:1px solid var(--line); border-radius:14px; padding:12px 14px; }
   .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
   .primary, .quiet, .danger { border:0; border-radius:999px; padding:12px 18px; font-weight:700; cursor:pointer; }
@@ -50,7 +50,7 @@
 <body>
 <main>
   <h1>Organize SD card</h1>
-  <p class="lede">Copies every photo and video straight from the Sony card onto the hard drive. One folder per day, then Photos or Videos, then Vertical or Horizontal. A taller picture goes in Vertical. A square goes in Horizontal. Sony XML and THM files stay next to their video. Nothing is saved on this Mac.</p>
+  <p class="lede">Copies every photo and video straight from the Sony card onto the hard drive. A day with enough photos and videos gets its own folder. Smaller days share Other Days. A trip you name, Tetons by default, gets its own parent folder and uses that same rule. Then Photos or Videos, then Vertical or Horizontal. A taller picture goes in Vertical. A square goes in Horizontal. Sony XML and THM files stay next to their video. Nothing is saved on this Mac.</p>
 
   <div class="grid">
     <section>
@@ -66,7 +66,24 @@
   <section>
     <label for="rootName">Folder name on the hard drive</label>
     <input id="rootName" value="Sony" autocomplete="off" maxlength="80">
-    <p class="muted">Files land in this folder, then a folder for the day, then Photos or Videos, then Vertical or Horizontal.</p>
+    <label for="minDay">Photos and videos a day needs for its own folder</label>
+    <input id="minDay" type="number" min="1" max="100000" value="24" inputmode="numeric">
+    <p class="muted">Fewer than this share one folder, Other Days. Photos and videos count. The small Sony notes next to a video do not.</p>
+    <div class="grid">
+      <div>
+        <label for="tripName">Trip folder</label>
+        <input id="tripName" value="Tetons" autocomplete="off" maxlength="80">
+      </div>
+      <div>
+        <label for="tripStart">Trip starts</label>
+        <input id="tripStart" type="date" value="2026-10-15">
+      </div>
+      <div>
+        <label for="tripEnd">Trip ends</label>
+        <input id="tripEnd" type="date" value="2026-10-22">
+      </div>
+    </div>
+    <p class="muted">Leave the trip name blank to skip it. Dates in that range, including the start and the end, go under the trip. A small trip day goes in the trip's Other Days.</p>
     <pre class="tree" id="tree"></pre>
     <div class="row" style="margin-top:14px">
       <button class="quiet" id="refresh" type="button">Refresh drives</button>
@@ -111,18 +128,51 @@ async function api(path, body) {
   return data;
 }
 function picks() {
-  return { source, dest, rootName: $("rootName").value.trim() || "Sony" };
+  return {
+    source, dest,
+    rootName: $("rootName").value.trim() || "Sony",
+    minDay: $("minDay").value.trim() || "24",
+    tripName: $("tripName").value.trim(),
+    tripStart: $("tripStart").value,
+    tripEnd: $("tripEnd").value
+  };
 }
 function showTree() {
   const name = $("rootName").value.trim() || "Sony";
-  $("tree").textContent = [
+  const trip = $("tripName").value.trim();
+  const minDay = $("minDay").value.trim() || "24";
+  const start = $("tripStart").value || "2026-10-15";
+  const end = $("tripEnd").value || "2026-10-22";
+  const lines = [
     name + "/YYYY-MM-DD/Photos/Vertical",
     name + "/YYYY-MM-DD/Photos/Horizontal",
     name + "/YYYY-MM-DD/Videos/Vertical",
-    name + "/YYYY-MM-DD/Videos/Horizontal"
-  ].join("\n");
+    name + "/YYYY-MM-DD/Videos/Horizontal",
+    "",
+    name + "/Other Days/Photos/Vertical",
+    name + "/Other Days/Photos/Horizontal",
+    name + "/Other Days/Videos/Vertical",
+    name + "/Other Days/Videos/Horizontal",
+    "A day with fewer than " + minDay + " photos and videos goes in Other Days."
+  ];
+  if (trip) {
+    lines.push(
+      "",
+      name + "/" + trip + "/YYYY-MM-DD/Photos/Vertical",
+      name + "/" + trip + "/YYYY-MM-DD/Photos/Horizontal",
+      name + "/" + trip + "/YYYY-MM-DD/Videos/Vertical",
+      name + "/" + trip + "/YYYY-MM-DD/Videos/Horizontal",
+      "",
+      name + "/" + trip + "/Other Days/Photos/Vertical",
+      name + "/" + trip + "/Other Days/Photos/Horizontal",
+      name + "/" + trip + "/Other Days/Videos/Vertical",
+      name + "/" + trip + "/Other Days/Videos/Horizontal",
+      trip + " is " + start + " through " + end + ". A small day in that range goes in " + trip + "/Other Days."
+    );
+  }
+  $("tree").textContent = lines.join("\n");
 }
-$("rootName").addEventListener("input", showTree);
+["rootName", "minDay", "tripName", "tripStart", "tripEnd"].forEach(id => $(id).addEventListener("input", showTree));
 showTree();
 function renderVolumes(list) {
   const draw = (el, which) => {
@@ -199,7 +249,7 @@ $("scan").onclick = async () => {
       const row = document.createElement("div");
       row.className = "day";
       const left = document.createElement("span");
-      left.textContent = day.day;
+      left.textContent = day.day + "  →  " + (day.folder || day.day);
       const right = document.createElement("span");
       right.className = "muted";
       const bits = [];
