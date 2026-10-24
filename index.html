@@ -1282,6 +1282,20 @@
     all.push({ panel: plusPanel, render(){}, close() { plusPanel.hidden = true; plusBtn.setAttribute("aria-expanded", "false"); } });
     pillsBox.append(plusBtn); panelsBox.append(plusPanel);
 
+    // Adventure is a menu so more adventure links can be added beside this first one.
+    const adventureBtn = el("button", "pill"); adventureBtn.type = "button";
+    adventureBtn.id = "adventurePill"; adventureBtn.setAttribute("aria-expanded", "false");
+    adventureBtn.setAttribute("aria-controls", "adventurePanel");
+    adventureBtn.append(document.createTextNode("Adventure ")); adventureBtn.insertAdjacentHTML("beforeend", CHEV);
+    const adventurePanel = el("div", "panel"); adventurePanel.id = "adventurePanel"; adventurePanel.hidden = true;
+    const friendLink = el("a", "pill"); friendLink.href = "stay-with-a-friend.html";
+    friendLink.textContent = "Stay with a Friend"; friendLink.style.textDecoration = "none";
+    const adventureLinks = el("div", "pills"); adventureLinks.append(friendLink); adventurePanel.append(adventureLinks);
+    adventureBtn.onclick = () => { const opening = adventurePanel.hidden; all.forEach(o => o.close());
+      if (opening) { adventurePanel.hidden = false; adventureBtn.setAttribute("aria-expanded", "true"); } };
+    all.push({ panel: adventurePanel, render(){}, close(){ adventurePanel.hidden = true; adventureBtn.setAttribute("aria-expanded", "false"); } });
+    pillsBox.insertBefore(adventureBtn, plusBtn); panelsBox.append(adventurePanel);
+
     function seedLinkPills() {
       const list = sect("linkpills");
       const SL = "https://daxtontessmer-ai.github.io/shot-list/";
