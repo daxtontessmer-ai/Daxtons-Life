@@ -523,7 +523,7 @@
           if (e.button || relationshipDrag) return;
           pointerId = e.pointerId; x0 = e.clientX; y0 = e.clientY; held = false;
           clearTimeout(relationshipTimer);
-          relationshipTimer = setTimeout(() => {
+          const beginRelationshipDrag = () => {
             relationshipTimer = null; held = true;
             const ghost = el("div", "pill relationship-ghost", it.name);
             ghost.style.left = x0 + "px"; ghost.style.top = y0 + "px"; document.body.append(ghost);
@@ -532,7 +532,9 @@
             if (node.setPointerCapture) node.setPointerCapture(pointerId);
             if (navigator.vibrate) navigator.vibrate(15);
             relationStatus.textContent = "Drop on Family, Friends, Girls, Acquaintances, or another person.";
-          }, node.classList.contains("relationship-grip") ? 0 : 380);
+          };
+          if (node.classList.contains("relationship-grip")) beginRelationshipDrag();
+          else relationshipTimer = setTimeout(beginRelationshipDrag, 380);
         });
         node.addEventListener("pointermove", e => {
           if (relationshipTimer && Math.hypot(e.clientX-x0,e.clientY-y0)>10) { clearTimeout(relationshipTimer); relationshipTimer = null; }
