@@ -58,7 +58,9 @@
   <div class="top"><span>Daxton's Life</span><span id="day"></span></div>
 <style>
     .rel { position:fixed; z-index:3; left:0; right:0; top:calc(44px + env(safe-area-inset-top));
-           padding:0 16px; max-width:640px; margin:0 auto; animation:rise .5s 0s cubic-bezier(.2,.7,.2,1) both; }
+           padding:0 16px; max-width:640px; margin:0 auto; animation:rise .5s 0s cubic-bezier(.2,.7,.2,1) both;
+           bottom:0; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; pointer-events:none; }
+    .rel > * { pointer-events:auto; }
     .pill { display:inline-flex; align-items:center; gap:8px; font:inherit; font-size:14px; font-weight:600;
             color:var(--ink); background:rgba(20,20,20,.55); border:1px solid rgba(244,241,234,.22);
             border-radius:999px; padding:9px 16px; cursor:pointer; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
@@ -1078,13 +1080,29 @@
       };
     })();
     SECTIONS.forEach(c => all.push(c.alarm ? makeAlarmSection(c) : makeSection(c)));
+    // Open dropdowns fill most of the screen: the pill area scrolls up so the dropdown starts
+    // near the top (one row of pills still showing above it), then the dropdown takes the rest.
+    const ABOVE = 56, seenOpen = new WeakSet();
     function fitPanels() {
-      const vh = (window.visualViewport ? window.visualViewport.height : innerHeight);
+      const rel = $("rel"), vh = (window.visualViewport ? window.visualViewport.height : innerHeight);
+      const relTop = rel.getBoundingClientRect().top;
+      let newlyOpened = null, anyOpen = false;
       document.querySelectorAll(".rel .panel").forEach(pn => {
-        if (pn.hidden) return;
-        const top = pn.getBoundingClientRect().top;
-        pn.style.maxHeight = Math.max(180, Math.floor(vh - top - 12)) + "px";
+        const topLevel = pn.parentNode.id === "panels" || pn.parentNode.id === "linkPanels";
+        if (pn.hidden) { seenOpen.delete(pn); return; }
+        if (topLevel) {
+          anyOpen = true;
+          pn.style.maxHeight = Math.max(240, Math.floor(vh - relTop - ABOVE - 16)) + "px";
+          if (!seenOpen.has(pn)) { seenOpen.add(pn); newlyOpened = pn; }
+        } else {
+          const top = pn.getBoundingClientRect().top;
+          pn.style.maxHeight = Math.max(180, Math.floor(vh - top - 12)) + "px";
+        }
       });
+      if (newlyOpened) {
+        const y = newlyOpened.getBoundingClientRect().top - relTop + rel.scrollTop - ABOVE;
+        rel.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+      } else if (!anyOpen && rel.scrollTop) rel.scrollTo({ top: 0, behavior: "smooth" });
     }
     document.addEventListener("click", () => requestAnimationFrame(fitPanels));
     addEventListener("resize", fitPanels);

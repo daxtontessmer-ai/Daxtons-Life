@@ -2,6 +2,11 @@
 
 Every commit gets a summary and timestamp here (Central Time). Newest first.
 
+## 2026-10-24
+
+- **5:57 AM CT — v48: dropdowns fill most of the screen** (Claude, `main`)
+  Tapping a pill on the main page now slides the pill list up so the dropdown starts near the top of the screen and takes up most of the page, instead of being squeezed into the bottom half. Scroll up to get back to the other pills, or tap the pill again to close it and everything slides back.
+
 ## 2026-10-14
 
 - **5:35 PM CT — v45: Prayers, your own pills (+), and pills inside pills** (Claude, `main`)
