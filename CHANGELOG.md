@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-24
 
+- **6:07 AM CT — v49: tap outside a dropdown to close it** (Claude, `main`)
+  With a dropdown open, tap anywhere outside the box (like the space at the top of the screen) and it closes and slides all the pills back down. Taps inside the box work as before.
+
 - **5:57 AM CT — v48: dropdowns fill most of the screen** (Claude, `main`)
   Tapping a pill on the main page now slides the pill list up so the dropdown starts near the top of the screen and takes up most of the page, instead of being squeezed into the bottom half. Scroll up to get back to the other pills, or tap the pill again to close it and everything slides back.
 

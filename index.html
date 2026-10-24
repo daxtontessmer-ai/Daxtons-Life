@@ -1105,6 +1105,13 @@
       } else if (!anyOpen && rel.scrollTop) rel.scrollTo({ top: 0, behavior: "smooth" });
     }
     document.addEventListener("click", () => requestAnimationFrame(fitPanels));
+    // Tap outside an open dropdown (like the space above it) to close it and bring the pills back down.
+    document.addEventListener("click", e => {
+      const open = [...document.querySelectorAll("#panels > .panel, #linkPanels > .panel")].some(p => !p.hidden);
+      if (!open) return;
+      if (e.target.closest(".panel, button, a, input, textarea, select, label, .sheet, .alarm-ring, [role=dialog], .relationship-ghost")) return;
+      all.forEach(o => o.close());
+    });
     addEventListener("resize", fitPanels);
     if (window.visualViewport) visualViewport.addEventListener("resize", fitPanels);
     new MutationObserver(() => requestAnimationFrame(fitPanels)).observe($("rel"), { subtree:true, attributes:true, attributeFilter:["hidden"], childList:true });
