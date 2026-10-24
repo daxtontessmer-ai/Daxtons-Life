@@ -229,8 +229,24 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         if cors:
             self.send_header("Access-Control-Allow-Origin", "*")
+            # GitHub Pages is https. Chrome asks before it will call http://127.0.0.1.
+            self.send_header("Access-Control-Allow-Private-Network", "true")
         self.end_headers()
         self.wfile.write(data)
+
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        path = urlparse(self.path).path
+        if path != "/api/health":
+            self._send_json(404, {"error": "Not found."})
+            return
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Private-Network", "true")
+        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Content-Length", "0")
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
 
 
 def _known_volume(path_str: str) -> Path:

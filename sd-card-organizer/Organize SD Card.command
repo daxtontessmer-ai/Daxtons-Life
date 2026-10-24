@@ -18,5 +18,14 @@ if curl -fsS --max-time 1 "${URL}api/health" >/dev/null 2>&1; then
   exit 0
 fi
 
-(sleep 0.8 && open "$URL") &
+# Open the page only after the organizer answers, so Safari never lands on a connection error.
+(
+  for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+    if curl -fsS --max-time 1 "${URL}api/health" >/dev/null 2>&1; then
+      open "$URL"
+      exit 0
+    fi
+    sleep 0.25
+  done
+) &
 exec python3 server.py

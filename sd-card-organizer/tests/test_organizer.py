@@ -61,6 +61,61 @@ def mp4_with_creation(seconds: int, body: bytes = b"\x11" * 64) -> bytes:
     return ftyp + mdat + moov
 
 
+def tiff_oriented(date_text: str, width: int, height: int, orientation: int) -> bytes:
+    date = date_text.encode("ascii") + b"\x00"
+    exif_ifd_off = 62
+    string_off = 80
+    ifd0 = struct.pack("<H", 4)
+    ifd0 += struct.pack("<HHI", 0x0100, 4, 1) + struct.pack("<I", width)
+    ifd0 += struct.pack("<HHI", 0x0101, 4, 1) + struct.pack("<I", height)
+    ifd0 += struct.pack("<HHI", 0x0112, 3, 1) + struct.pack("<H", orientation) + b"\x00\x00"
+    ifd0 += struct.pack("<HHI", 0x8769, 4, 1) + struct.pack("<I", exif_ifd_off)
+    ifd0 += struct.pack("<I", 0)
+    exif = struct.pack("<H", 1)
+    exif += struct.pack("<HHI", 0x9003, 2, len(date)) + struct.pack("<I", string_off)
+    exif += struct.pack("<I", 0)
+    return b"II" + struct.pack("<H", 42) + struct.pack("<I", 8) + ifd0 + exif + date
+
+
+def jpeg_oriented(date_text: str, width: int, height: int, orientation: int, payload: bytes = b"pix") -> bytes:
+    tiff = tiff_oriented(date_text, width, height, orientation)
+    app = b"Exif\x00\x00" + tiff
+    sof = struct.pack(">BHHB", 8, height, width, 1)
+    return (
+        b"\xff\xd8"
+        + b"\xff\xe1" + struct.pack(">H", len(app) + 2) + app
+        + b"\xff\xc0" + struct.pack(">H", len(sof) + 2) + sof
+        + payload
+        + b"\xff\xd9"
+    )
+
+
+def mp4_with_frame(seconds: int, width: int, height: int, quarter_turn: bool) -> bytes:
+    def box(kind: bytes, payload: bytes) -> bytes:
+        return struct.pack(">I4s", 8 + len(payload), kind) + payload
+
+    mvhd = struct.pack(">I", 0)
+    mvhd += struct.pack(">II", seconds, seconds)
+    mvhd += struct.pack(">II", 1000, 1000)
+    mvhd += b"\x00" * 16
+    if quarter_turn:
+        matrix = [0, 0x10000, 0, -0x10000, 0, 0, 0, 0, 0x40000000]
+    else:
+        matrix = [0x10000, 0, 0, 0, 0x10000, 0, 0, 0, 0x40000000]
+    tkhd = bytes([0, 0, 0, 7])
+    tkhd += struct.pack(">II", 0, 0)
+    tkhd += struct.pack(">II", 1, 0)
+    tkhd += struct.pack(">I", 1000)
+    tkhd += b"\x00" * 8
+    tkhd += struct.pack(">hhhh", 0, 0, 0, 0)
+    tkhd += struct.pack(">9i", *matrix)
+    tkhd += struct.pack(">II", width << 16, height << 16)
+    hdlr = bytes(4) + struct.pack(">I", 0) + b"vide" + b"Video\x00"
+    trak = box(b"trak", box(b"tkhd", tkhd) + box(b"mdia", box(b"hdlr", hdlr)))
+    ftyp = box(b"ftyp", b"isom" + b"\x00\x00\x00\x00" + b"isom")
+    return ftyp + box(b"moov", box(b"mvhd", mvhd) + trak)
+
+
 def sony_xml(value: str) -> bytes:
     return (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -108,6 +163,45 @@ class ParseTests(unittest.TestCase):
             found = organizer.quicktime_datetime(path)
             self.assertIsNotNone(found)
             self.assertEqual(found, moment.astimezone().replace(tzinfo=None))
+
+    def test_photo_orientation_respects_exif_rotation_and_square(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            landscape = root / "wide.JPG"
+            turned = root / "turned.JPG"
+            square = root / "square.JPG"
+            tall = root / "tall.JPG"
+            upside = root / "upside.JPG"
+            write(landscape, jpeg_oriented("2024:03:15 10:00:00", 4000, 3000, 1))
+            write(turned, jpeg_oriented("2024:03:15 10:00:00", 4000, 3000, 6))
+            write(square, jpeg_oriented("2024:03:15 10:00:00", 2000, 2000, 1))
+            write(tall, jpeg_oriented("2024:03:15 10:00:00", 3000, 4000, 1))
+            write(upside, jpeg_oriented("2024:03:15 10:00:00", 1920, 1080, 3))
+            self.assertEqual(organizer.photo_orientation(landscape), "Horizontal")
+            self.assertEqual(organizer.photo_orientation(turned), "Vertical")
+            self.assertEqual(organizer.photo_orientation(square), "Horizontal")
+            self.assertEqual(organizer.photo_orientation(tall), "Vertical")
+            self.assertEqual(organizer.photo_orientation(upside), "Horizontal")
+            self.assertEqual(organizer.exif_datetime(turned), datetime(2024, 3, 15, 10, 0, 0))
+
+    def test_video_orientation_uses_matrix_and_ffprobe_rotation(self):
+        moment = datetime(2024, 5, 2, 18, 0, tzinfo=timezone.utc)
+        seconds = int((moment - organizer.QT_EPOCH).total_seconds())
+        with tempfile.TemporaryDirectory() as tmp:
+            wide = Path(tmp) / "wide.MP4"
+            tall = Path(tmp) / "tall.MP4"
+            write(wide, mp4_with_frame(seconds, 1920, 1080, False))
+            write(tall, mp4_with_frame(seconds, 1920, 1080, True))
+            self.assertEqual(organizer.video_orientation(wide), "Horizontal")
+            self.assertEqual(organizer.video_orientation(tall), "Vertical")
+        probe = json.dumps({
+            "streams": [{"width": 1920, "height": 1080, "tags": {"rotate": "90"}}]
+        }).encode()
+        self.assertEqual(organizer._display_size_from_probe(probe), (1080, 1920))
+        sideways = json.dumps({
+            "streams": [{"width": 1080, "height": 1920, "side_data_list": [{"rotation": -90}]}]
+        }).encode()
+        self.assertEqual(organizer._display_size_from_probe(sideways), (1920, 1080))
 
 
 class CopyTests(unittest.TestCase):
@@ -165,13 +259,13 @@ class CopyTests(unittest.TestCase):
         report = organizer.run_copy(self.card, self.drive)
         self.assertEqual(report.failed, 0)
         self.assertEqual(os.listdir(self.internal), [])
-        photos_15 = self.drive / "2024-03-15" / "Photos" / "DSC0001.JPG"
-        photos_16 = self.drive / "2024-03-16" / "Photos" / "DSC0002.JPG"
-        fallback = self.drive / "2021-07-04" / "Photos" / "DSC0099.JPG"
-        video = self.drive / "2024-01-02" / "Videos" / "C0001.MP4"
-        xml = self.drive / "2024-01-02" / "Videos" / "C0001M01.XML"
-        thm = self.drive / "2024-01-02" / "Videos" / "C0001T01.THM"
-        orphan = self.drive / "2023-08-08" / "Videos" / "ORPHAN.XML"
+        photos_15 = self.drive / "2024-03-15" / "Photos" / "Horizontal" / "DSC0001.JPG"
+        photos_16 = self.drive / "2024-03-16" / "Photos" / "Horizontal" / "DSC0002.JPG"
+        fallback = self.drive / "2021-07-04" / "Photos" / "Horizontal" / "DSC0099.JPG"
+        video = self.drive / "2024-01-02" / "Videos" / "Horizontal" / "C0001.MP4"
+        xml = self.drive / "2024-01-02" / "Videos" / "Horizontal" / "C0001M01.XML"
+        thm = self.drive / "2024-01-02" / "Videos" / "Horizontal" / "C0001T01.THM"
+        orphan = self.drive / "2023-08-08" / "Videos" / "Horizontal" / "ORPHAN.XML"
         for path in (photos_15, photos_16, fallback, video, xml, thm, orphan):
             self.assertTrue(path.is_file(), path)
         self.assertEqual(sha(photos_15), sha(self.card / "DCIM" / "100MSDCF" / "DSC0001.JPG"))
@@ -188,11 +282,11 @@ class CopyTests(unittest.TestCase):
         first = organizer.run_copy(self.card, self.drive)
         self.assertGreater(first.copied, 0)
         # A different photo already using the name that the next card will bring.
-        conflict_dir = self.drive / "2024-03-15" / "Photos"
+        conflict_dir = self.drive / "2024-03-15" / "Photos" / "Horizontal"
         original = (conflict_dir / "DSC0001.JPG").read_bytes()
         (conflict_dir / "DSC0001.JPG").write_bytes(b"different-photo-same-name")
         # And the day-two photo is already there, byte for byte, under a renamed file.
-        day_two = conflict_dir.parent.parent / "2024-03-16" / "Photos"
+        day_two = self.drive / "2024-03-16" / "Photos" / "Horizontal"
         existing = day_two / "DSC0002.JPG"
         existing.rename(day_two / "DSC0002_2.JPG")
 
@@ -230,7 +324,7 @@ class CopyTests(unittest.TestCase):
         self.assertTrue(any(item["rel"].endswith("NOTCOPIED.JPG") for item in plan["kept"]))
 
         # Removing the drive copy makes the card file ineligible, even if it was copied before.
-        video = self.drive / "2024-01-02" / "Videos" / "C0001.MP4"
+        video = self.drive / "2024-01-02" / "Videos" / "Horizontal" / "C0001.MP4"
         video.unlink()
         plan = organizer.deletion_plan(self.card, self.drive)
         self.assertNotIn("PRIVATE/M4ROOT/CLIP/C0001.MP4", {item["rel"] for item in plan["eligible"]})
@@ -245,9 +339,56 @@ class CopyTests(unittest.TestCase):
         self.assertFalse((self.card / "DCIM" / "100MSDCF" / "DSC0001.JPG").exists())
         self.assertTrue(extra.exists())
         self.assertTrue((self.root / "secret.txt").exists())
-        self.assertTrue((self.drive / "2024-03-15" / "Photos" / "DSC0001.JPG").exists())
+        self.assertTrue((self.drive / "2024-03-15" / "Photos" / "Horizontal" / "DSC0001.JPG").exists())
         # The video whose drive copy was removed is still on the card.
         self.assertTrue((self.card / "PRIVATE" / "M4ROOT" / "CLIP" / "C0001.MP4").exists())
+
+    def test_portrait_square_and_legacy_folder(self):
+        write(self.card / "wide.JPG", jpeg_oriented("2024:03:15 10:00:00", 4000, 3000, 1, b"wide"))
+        write(self.card / "tall.JPG", jpeg_oriented("2024:03:15 10:00:00", 4000, 3000, 6, b"tall-pixels"))
+        write(self.card / "square.JPG", jpeg_oriented("2024:03:15 10:00:00", 1000, 1000, 1, b"square"))
+        seconds = int((datetime(2024, 3, 15, 12, 0, tzinfo=timezone.utc) - organizer.QT_EPOCH).total_seconds())
+        write(self.card / "clip.MP4", mp4_with_frame(seconds, 1920, 1080, True))
+        write(self.card / "clipM01.XML", sony_xml("2024-03-15T12:00:00-05:00"))
+        report = organizer.run_copy(self.card, self.drive)
+        self.assertEqual(report.failed, 0)
+        self.assertTrue((self.drive / "2024-03-15" / "Photos" / "Horizontal" / "wide.JPG").is_file())
+        self.assertTrue((self.drive / "2024-03-15" / "Photos" / "Vertical" / "tall.JPG").is_file())
+        self.assertTrue((self.drive / "2024-03-15" / "Photos" / "Horizontal" / "square.JPG").is_file())
+        self.assertTrue((self.drive / "2024-03-15" / "Videos" / "Vertical" / "clip.MP4").is_file())
+        self.assertTrue((self.drive / "2024-03-15" / "Videos" / "Vertical" / "clipM01.XML").is_file())
+        self.assertEqual(os.listdir(self.internal), [])
+
+        # A file copied by an older version, sitting directly in Photos, is not copied again.
+        legacy = self.drive / "2024-03-15" / "Photos" / "wide.JPG"
+        current = self.drive / "2024-03-15" / "Photos" / "Horizontal" / "wide.JPG"
+        legacy.write_bytes(current.read_bytes())
+        current.unlink()
+        again = organizer.run_copy(self.card, self.drive)
+        by_name = {item.source.name: item for item in again.results}
+        self.assertEqual(by_name["wide.JPG"].action, "skipped")
+        self.assertFalse(current.exists())
+        self.assertTrue(legacy.is_file())
+
+    def test_delete_needs_matching_size_and_hash(self):
+        write(self.card / "A.JPG", jpeg_oriented("2024:04:04 04:04:04", 4000, 3000, 1, b"abc-photo"))
+        organizer.run_copy(self.card, self.drive)
+        dest = self.drive / "2024-04-04" / "Photos" / "Horizontal" / "A.JPG"
+        original = dest.read_bytes()
+        rel = "A.JPG"
+        dest.write_bytes(original[:-1])
+        plan = organizer.deletion_plan(self.card, self.drive)
+        self.assertNotIn(rel, {item["rel"] for item in plan["eligible"]})
+        self.assertTrue(any("checksum" in item["reason"].lower() or "missing" in item["reason"].lower() for item in plan["kept"]))
+        dest.write_bytes(original[:-1] + b"Z")
+        plan = organizer.deletion_plan(self.card, self.drive)
+        self.assertNotIn(rel, {item["rel"] for item in plan["eligible"]})
+        self.assertTrue((self.card / "A.JPG").exists())
+        dest.write_bytes(original)
+        plan = organizer.deletion_plan(self.card, self.drive)
+        self.assertIn(rel, {item["rel"] for item in plan["eligible"]})
+        # Delete still does not run unless delete_verified is called.
+        self.assertTrue((self.card / "A.JPG").exists())
 
 
 class ServerTests(unittest.TestCase):
@@ -303,10 +444,24 @@ class ServerTests(unittest.TestCase):
             page = res.read().decode()
         self.assertIn("Organize SD card", page)
         self.assertIn("Delete from the SD card", page)
+        self.assertIn("Photos/Vertical", page)
+        self.assertIn("Videos/Horizontal", page)
         status, headers, body = self.request("GET", "/api/health")
         self.assertEqual(status, 200)
         self.assertTrue(body["ok"])
         self.assertEqual(headers.get("Access-Control-Allow-Origin"), "*")
+        self.assertEqual(headers.get("Access-Control-Allow-Private-Network"), "true")
+        import http.client
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        conn.request("OPTIONS", "/api/health", headers={
+            "Origin": "https://daxtontessmer-ai.github.io",
+            "Access-Control-Request-Private-Network": "true",
+        })
+        preflight = conn.getresponse()
+        preflight.read()
+        self.assertEqual(preflight.status, 204)
+        self.assertEqual(preflight.getheader("Access-Control-Allow-Private-Network"), "true")
+        conn.close()
 
     def test_copy_then_delete_requires_an_explicit_confirm(self):
         status, _, volumes = self.request("GET", "/api/volumes")
@@ -327,7 +482,7 @@ class ServerTests(unittest.TestCase):
             time.sleep(0.05)
         self.assertEqual(job["state"], "done")
         self.assertEqual(job["report"]["copied"], 2)
-        saved = self.hdd / "Sony" / "2024-06-01" / "Photos" / "DSC0100.JPG"
+        saved = self.hdd / "Sony" / "2024-06-01" / "Photos" / "Horizontal" / "DSC0100.JPG"
         self.assertTrue(saved.is_file())
         self.assertEqual(saved.read_bytes(), (self.card / "DCIM" / "DSC0100.JPG").read_bytes())
 
