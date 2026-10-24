@@ -40,6 +40,17 @@
   @keyframes rise { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:none; } }
   @keyframes grow { from { transform:scaleX(0); } to { transform:scaleX(1); } }
   @media (prefers-reduced-motion:reduce) { * { animation:none !important; } }
+
+/* Relationship groups: existing people stay in To organize until moved. */
+.relationship-groups{position:sticky;top:-12px;z-index:5;background:#141414;padding:10px 0;border-radius:12px}
+.relationship-group[aria-pressed="true"]{background:var(--ink);color:#101010}.relationship-group[aria-pressed="true"] .n{color:#555}
+.relationship-help{font-size:12px;line-height:1.5;color:var(--dim);margin:7px 3px 14px;min-height:36px}
+.relationship-row{display:flex;align-items:center;gap:6px}.relationship-row>.pill{flex:1;min-width:0;text-align:left;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.relationship-grip{flex:none;width:36px;min-height:44px;border:0;border-radius:12px;background:#ffffff0c;color:var(--dim);font-size:26px;cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.relationship-ghost{position:fixed;z-index:1000;pointer-events:none;transform:translate(-50%,-130%) scale(1.04);box-shadow:0 16px 40px #0009;background:#f4f1ea;color:#171717;max-width:80vw}
+.relationship-lifted{opacity:.35}.relationship-drop{outline:2px solid #e6c584!important;background:#806f3d55!important}.relationship-before{border-top:3px solid #e6c584}.relationship-after{border-bottom:3px solid #e6c584}
+.relationship-tools{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:4px 0 12px}.relationship-tools label{font-size:12px;color:var(--dim)}.relationship-tools select{font:inherit;font-size:14px;color:var(--ink);background:#242424;border:1px solid #ffffff40;border-radius:999px;padding:8px;margin-left:4px;color-scheme:dark}.relationship-tools button{min-height:40px}.relationship-tools button:disabled{opacity:.3;cursor:default}
+
 </style>
 </head>
 <body>
@@ -454,6 +465,127 @@
       form.append(input, addBtn);
       const list = el("ul", "people");
       panel.append(form, list);
+      // Relationship placement is separate from the person record so moving a
+      // person never replaces their notes, dates, name, or deletion status.
+      const relationshipGroups = [
+        ["family", "Family"], ["friends", "Friends"],
+        ["girls", "Girls"], ["acquaintances", "Acquaintances"], ["unsorted", "To organize"]
+      ];
+      let relationshipGroup = "unsorted", relationshipDrag = null, relationshipTimer = null;
+      const placement = id => (data.sections.relationshipplacement || []).find(p => p.id === id);
+      const groupFor = id => {
+        const g = placement(id)?.group;
+        return relationshipGroups.some(([key]) => key === g) ? g : "unsorted";
+      };
+      const relationshipSort = (a, b) => (placement(a.id)?.order ?? a.created ?? 0) - (placement(b.id)?.order ?? b.created ?? 0) || a.id.localeCompare(b.id);
+      const relationTabs = el("div", "pills relationship-groups"), relationStatus = el("p", "relationship-help");
+      relationTabs.setAttribute("aria-label", "Relationship groups");
+      relationStatus.setAttribute("role", "status"); relationStatus.setAttribute("aria-live", "polite");
+      if (cfg.key === "rel") {
+        panel.prepend(relationTabs, relationStatus);
+        relationshipGroups.forEach(([key, title]) => {
+          const tab = el("button", "pill relationship-group"); tab.type = "button";
+          tab.dataset.relationshipGroup = key; tab.append(document.createTextNode(title + " "), el("span", "n"));
+          tab.onclick = () => { relationshipGroup = key; focusId = null; editing = null; render(); };
+          relationTabs.append(tab);
+        });
+      }
+      function moveRelationship(id, group, beforeId = null) {
+        const siblings = live().filter(p => p.id !== id && groupFor(p.id) === group).sort(relationshipSort);
+        let at = beforeId ? siblings.findIndex(p => p.id === beforeId) : siblings.length;
+        if (at < 0) at = siblings.length;
+        siblings.splice(at, 0, list_().find(p => p.id === id));
+        const meta = data.sections.relationshipplacement ||= [];
+        const stamp = Math.max(now(), ...meta.map(m => (m.updated || 0) + 1));
+        siblings.forEach((person, order) => {
+          if (!person) return;
+          let entry = meta.find(m => m.id === person.id);
+          if (!entry) { entry = { id:person.id }; meta.push(entry); }
+          Object.assign(entry, { group, order, updated:stamp });
+        });
+        relationshipGroup = group; focusId = null; editing = null;
+        changed();
+        relationStatus.textContent = "Saved in " + relationshipGroups.find(([k]) => k === group)[1] + ". Hold the grip to move again.";
+      }
+      function updateRelationshipGroups(items) {
+        if (cfg.key !== "rel") return;
+        relationTabs.querySelectorAll("button").forEach(tab => {
+          const key = tab.dataset.relationshipGroup;
+          tab.setAttribute("aria-pressed", String(key === relationshipGroup));
+          tab.querySelector(".n").textContent = items.filter(p => groupFor(p.id) === key).length;
+        });
+        relationStatus.textContent = "Hold the grip, then drag onto a group or another person to reorder. Tap a person for notes and move controls.";
+        input.placeholder = "Add a person to " + relationshipGroups.find(([k]) => k === relationshipGroup)[1];
+      }
+      function armRelationship(node, it, onTap) {
+        let x0 = 0, y0 = 0, held = false, pointerId = null;
+        node.addEventListener("pointerdown", e => {
+          if (e.button || relationshipDrag) return;
+          pointerId = e.pointerId; x0 = e.clientX; y0 = e.clientY; held = false;
+          clearTimeout(relationshipTimer);
+          relationshipTimer = setTimeout(() => {
+            relationshipTimer = null; held = true;
+            const ghost = el("div", "pill relationship-ghost", it.name);
+            ghost.style.left = x0 + "px"; ghost.style.top = y0 + "px"; document.body.append(ghost);
+            relationshipDrag = { id:it.id, ghost, target:null, group:relationshipGroup, before:null, pointerId };
+            node.classList.add("relationship-lifted"); panel.classList.add("relationship-sorting");
+            if (node.setPointerCapture) node.setPointerCapture(pointerId);
+            if (navigator.vibrate) navigator.vibrate(15);
+            relationStatus.textContent = "Drop on Family, Friends, Girls, Acquaintances, or another person.";
+          }, 380);
+        });
+        node.addEventListener("pointermove", e => {
+          if (relationshipTimer && Math.hypot(e.clientX-x0,e.clientY-y0)>10) { clearTimeout(relationshipTimer); relationshipTimer = null; }
+        });
+        ["pointerup", "pointercancel", "lostpointercapture"].forEach(type => node.addEventListener(type, () => { clearTimeout(relationshipTimer); relationshipTimer = null; }));
+        node.addEventListener("contextmenu", e => e.preventDefault());
+        node.addEventListener("click", e => { if (held) { e.preventDefault(); e.stopPropagation(); held = false; return; } if (onTap) onTap(); });
+      }
+      if (cfg.key === "rel") {
+        const clearDrop = () => panel.querySelectorAll(".relationship-drop,.relationship-before,.relationship-after").forEach(n => n.classList.remove("relationship-drop","relationship-before","relationship-after"));
+        const updateDrop = e => {
+          if (!relationshipDrag || e.pointerId !== relationshipDrag.pointerId) return;
+          const d = relationshipDrag;
+          d.ghost.style.left = e.clientX + "px"; d.ghost.style.top = e.clientY + "px";
+          clearDrop(); d.target = null;
+          const hit = document.elementFromPoint(e.clientX, e.clientY);
+          const tab = hit?.closest("[data-relationship-group]");
+          if (tab && relationTabs.contains(tab)) {
+            d.group = tab.dataset.relationshipGroup; d.before = null; d.target = tab; tab.classList.add("relationship-drop");
+          } else {
+            const row = hit?.closest("[data-relationship-person]");
+            if (row && list.contains(row) && row.dataset.relationshipPerson !== d.id) {
+              const next = live().filter(p => p.id !== d.id && groupFor(p.id) === relationshipGroup).sort(relationshipSort);
+              const id = row.dataset.relationshipPerson, rect = row.querySelector(".relationship-row").getBoundingClientRect();
+              const after = e.clientY > rect.top + rect.height/2;
+              d.group = relationshipGroup; d.before = after ? next[next.findIndex(p => p.id === id)+1]?.id || null : id;
+              d.target = row; row.classList.add(after?"relationship-after":"relationship-before");
+            } else if (hit && list.contains(hit) && !row) {
+              d.target = list; d.group = relationshipGroup; d.before = null; list.classList.add("relationship-drop");
+            }
+          }
+          // Scroll the panel while keeping the group buttons available at its top.
+          const rect = panel.getBoundingClientRect();
+          if (e.clientY > rect.bottom - 45) panel.scrollTop += 14;
+          else if (e.clientY < rect.top + 45) panel.scrollTop -= 14;
+        };
+        document.addEventListener("pointermove", updateDrop);
+        document.addEventListener("touchmove", e => { if (relationshipDrag) e.preventDefault(); }, {passive:false});
+        const finishRelationshipDrag = (e, commit) => {
+          clearTimeout(relationshipTimer); relationshipTimer = null;
+          if (!relationshipDrag || (e.pointerId != null && e.pointerId !== relationshipDrag.pointerId)) return;
+          if (commit) updateDrop(e);
+          const d = relationshipDrag; relationshipDrag = null;
+          d.ghost.remove(); clearDrop(); panel.classList.remove("relationship-sorting");
+          panel.querySelectorAll(".relationship-lifted").forEach(n => n.classList.remove("relationship-lifted"));
+          if (commit && d.target) moveRelationship(d.id, d.group, d.before);
+          else relationStatus.textContent = "Move canceled. Hold the grip to try again.";
+        };
+        document.addEventListener("pointerup", e => finishRelationshipDrag(e,true));
+        document.addEventListener("pointercancel", e => finishRelationshipDrag(e,false));
+        document.addEventListener("keydown", e => { if (e.key === "Escape" && relationshipDrag) finishRelationshipDrag({},false); });
+      }
+
       let roadmapSummary = null, roadmapFill = null, roadmapNext = null, roadmapCurrent = null, roadmapView = null, roadmapHideDone = false;
       // "Flat" pills (Live by): each entry is its own pill, no second layer underneath
       let flatMeta = null, bumpId = null;
@@ -525,6 +657,9 @@
         const entry = { id, name: v, created: now(), updated: now(), notes: [], done:false };
         if (cfg.prayer) entry.count = 0;
         list_().push(entry);
+        if (cfg.key === "rel") {
+          (data.sections.relationshipplacement ||= []).push({ id, group:relationshipGroup, order:Math.max(-1, ...live().filter(p => p.id !== id && groupFor(p.id) === relationshipGroup).map(p => placement(p.id)?.order ?? p.created ?? 0)) + 1, updated:now() });
+        }
         open.add(id); focusId = id; changed();
       };
       const setNotes = (it, notes, dates) => {
@@ -660,7 +795,7 @@
       }
 
       function render() {
-        const items = live().sort((a, b) => (a.created || 0) - (b.created || 0));
+        const items = live().sort(cfg.key === "rel" ? relationshipSort : (a, b) => (a.created || 0) - (b.created || 0));
         count.textContent = cfg.steps ? (items.length ? items.filter(i => i.done).length + "/" + items.length : "") : cfg.done ? (items.filter(i => !i.done).length || "") : (items.length || "");
         if (cfg.steps && roadmapSummary) {
           const completed = items.filter(i => i.done).length, answered = items.filter(i => (i.answer || "").trim()).length;
@@ -681,6 +816,7 @@
             if (open.has(next.id)) setTimeout(() => list.querySelector('.step [aria-expanded="true"]')?.scrollIntoView({ behavior:"smooth", block:"nearest" }), 0);
           };
         }
+        updateRelationshipGroups(items);
         list.replaceChildren();
         if (!items.length) list.append(el("li", "empty", cfg.empty));
         if (cfg.flat) {
@@ -688,7 +824,8 @@
           if (items.length && !shown.length) list.append(el("li", "empty", "Every roadmap stage is complete. Show all stages to review your work."));
           renderFlat(shown, items); return;
         }
-        const orderedItems = cfg.done ? [...items.filter(i => !i.done), ...items.filter(i => i.done)] : items;
+        const orderedItems = cfg.key === "rel" ? items.filter(it => groupFor(it.id) === relationshipGroup) : cfg.done ? [...items.filter(i => !i.done), ...items.filter(i => i.done)] : items;
+        if (cfg.key === "rel" && items.length && !orderedItems.length) list.append(el("li", "empty", "No one in this group yet. Move someone here or add a person above."));
         let doneHeading = false;
         for (const it of orderedItems) {
           if (cfg.done && it.done && !doneHeading) { list.append(el("li", "todo-done-label", "DONE · " + items.filter(i => i.done).length)); doneHeading = true; }
@@ -697,8 +834,9 @@
           const b = el("button", "pill"); b.setAttribute("aria-expanded", isOpen);
           b.append(el("span", "nm", it.name), el("span", "n", (it.notes || []).length || ""));
           b.insertAdjacentHTML("beforeend", CHEV);
-          holdable(b, () => { editing = { id: it.id, rename: true, text: it.name, armed: false }; render(); },
-                      () => { isOpen ? open.delete(it.id) : open.add(it.id); render(); });
+          const togglePerson = () => { isOpen ? open.delete(it.id) : open.add(it.id); render(); };
+          if (cfg.key === "rel") armRelationship(b, it, togglePerson);
+          else holdable(b, () => { editing = { id: it.id, rename: true, text: it.name, armed: false }; render(); }, togglePerson);
           if (editing && editing.id === it.id && editing.rename) {
             // Hold menu for a person / item: rename or delete
             const box = el("div", "editbox");
@@ -717,7 +855,13 @@
             setTimeout(() => { if (document.activeElement !== ri && !editing?.armed) ri.focus(); }, 0);
             list.append(li); continue;
           }
-          if (cfg.done) {
+          if (cfg.key === "rel") {
+            li.dataset.relationshipPerson = it.id;
+            const row = el("div", "relationship-row"), grip = el("button", "relationship-grip", "⠿");
+            grip.type = "button"; grip.setAttribute("aria-label", "Hold and drag " + it.name);
+            grip.title = "Hold and drag to move or reorder";
+            armRelationship(grip, it, togglePerson); row.append(grip, b); li.append(row);
+          } else if (cfg.done) {
             const row = el("div", "todo-row"), toggle = el("button", "todo-toggle", it.done ? "Undo" : "Done"); toggle.type = "button";
             toggle.setAttribute("aria-label", (it.done ? "Move out of Done: " : "Mark done: ") + it.name);
             toggle.onclick = () => { it.done = !it.done; it.updated = now(); open.delete(it.id); changed(); };
@@ -725,6 +869,20 @@
           } else li.append(b);
           if (isOpen) {
             const box = el("div", "notes"), ul = el("ul");
+            if (cfg.key === "rel") {
+              const tools = el("div", "relationship-tools"), label = el("label", null, "Move to "), select = el("select");
+              select.setAttribute("aria-label", "Move " + it.name + " to group");
+              relationshipGroups.forEach(([key,title]) => { const o=el("option",null,title);o.value=key;select.append(o); });
+              select.value=groupFor(it.id); select.onchange=()=>moveRelationship(it.id,select.value);label.append(select);
+              const siblings=orderedItems, at=siblings.findIndex(p=>p.id===it.id);
+              const up=el("button","rm","↑ Up"), down=el("button","rm","↓ Down"), edit=el("button","rm","Edit name");
+              up.type=down.type=edit.type="button";up.disabled=at===0;down.disabled=at===siblings.length-1;
+              up.setAttribute("aria-label","Move "+it.name+" up");down.setAttribute("aria-label","Move "+it.name+" down");
+              up.onclick=()=>moveRelationship(it.id,relationshipGroup,siblings[at-1].id);
+              down.onclick=()=>moveRelationship(it.id,relationshipGroup,siblings[at+2]?.id||null);
+              edit.onclick=()=>{ editing={id:it.id,rename:true,text:it.name,armed:false};render(); };
+              tools.append(label,up,down,edit);box.append(tools);
+            }
             (it.notes || []).forEach((t, i) => {
               const n = el("li", "note");
               if (editing && editing.id === it.id && editing.i === i) {
