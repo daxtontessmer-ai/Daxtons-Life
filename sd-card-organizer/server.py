@@ -77,8 +77,9 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if path == "/api/scan":
                 source, dest = self._roots(body)
+                layout = organizer.layout_from_request(body)
                 files = organizer.scan_card(source)
-                summary = organizer.summarize(files)
+                summary = organizer.summarize(files, layout, dest)
                 summary["source"] = str(source)
                 summary["dest"] = str(dest)
                 self._send_json(200, summary)
@@ -116,6 +117,7 @@ class Handler(BaseHTTPRequestHandler):
     def _start_copy(self, body: dict) -> None:
         global _CURRENT
         source, dest = self._roots(body)
+        layout = organizer.layout_from_request(body)
         with _LOCK:
             if _CURRENT and _JOBS.get(_CURRENT, {}).get("state") == "running":
                 raise organizer.OrganizerError("A copy is already running.")
@@ -149,7 +151,7 @@ class Handler(BaseHTTPRequestHandler):
                             job["log"].append(last)
                             job["log"] = job["log"][-40:]
 
-                report = organizer.run_copy(source, dest, on_progress)
+                report = organizer.run_copy(source, dest, on_progress, layout)
                 with _LOCK:
                     job["report"] = _public_report(report)
                     job["state"] = "done" if report.failed == 0 else "finished"
