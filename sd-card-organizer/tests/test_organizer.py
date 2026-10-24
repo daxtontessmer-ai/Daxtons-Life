@@ -259,13 +259,13 @@ class CopyTests(unittest.TestCase):
         report = organizer.run_copy(self.card, self.drive)
         self.assertEqual(report.failed, 0)
         self.assertEqual(os.listdir(self.internal), [])
-        photos_15 = self.drive / "2024-03-15" / "Photos" / "Horizontal" / "DSC0001.JPG"
-        photos_16 = self.drive / "2024-03-16" / "Photos" / "Horizontal" / "DSC0002.JPG"
-        fallback = self.drive / "2021-07-04" / "Photos" / "Horizontal" / "DSC0099.JPG"
-        video = self.drive / "2024-01-02" / "Videos" / "Horizontal" / "C0001.MP4"
-        xml = self.drive / "2024-01-02" / "Videos" / "Horizontal" / "C0001M01.XML"
-        thm = self.drive / "2024-01-02" / "Videos" / "Horizontal" / "C0001T01.THM"
-        orphan = self.drive / "2023-08-08" / "Videos" / "Horizontal" / "ORPHAN.XML"
+        photos_15 = self.drive / "Other Days" / "Photos" / "Horizontal" / "DSC0001.JPG"
+        photos_16 = self.drive / "Other Days" / "Photos" / "Horizontal" / "DSC0002.JPG"
+        fallback = self.drive / "Other Days" / "Photos" / "Horizontal" / "DSC0099.JPG"
+        video = self.drive / "Other Days" / "Videos" / "Horizontal" / "C0001.MP4"
+        xml = self.drive / "Other Days" / "Videos" / "Horizontal" / "C0001M01.XML"
+        thm = self.drive / "Other Days" / "Videos" / "Horizontal" / "C0001T01.THM"
+        orphan = self.drive / "Other Days" / "Videos" / "Horizontal" / "ORPHAN.XML"
         for path in (photos_15, photos_16, fallback, video, xml, thm, orphan):
             self.assertTrue(path.is_file(), path)
         self.assertEqual(sha(photos_15), sha(self.card / "DCIM" / "100MSDCF" / "DSC0001.JPG"))
@@ -276,17 +276,19 @@ class CopyTests(unittest.TestCase):
         # The video folder is the camera day from the XML, not the file dates of the sidecars.
         self.assertFalse((self.drive / "2017-02-02").exists())
         self.assertFalse((self.drive / "2019-01-01").exists())
+        self.assertFalse((self.drive / "2024-03-15").exists())
+        self.assertFalse((self.drive / "2024-01-02").exists())
 
     def test_second_card_merges_skips_duplicates_and_renames_conflicts(self):
         self.build_card()
         first = organizer.run_copy(self.card, self.drive)
         self.assertGreater(first.copied, 0)
         # A different photo already using the name that the next card will bring.
-        conflict_dir = self.drive / "2024-03-15" / "Photos" / "Horizontal"
+        conflict_dir = self.drive / "Other Days" / "Photos" / "Horizontal"
         original = (conflict_dir / "DSC0001.JPG").read_bytes()
         (conflict_dir / "DSC0001.JPG").write_bytes(b"different-photo-same-name")
         # And the day-two photo is already there, byte for byte, under a renamed file.
-        day_two = self.drive / "2024-03-16" / "Photos" / "Horizontal"
+        day_two = self.drive / "Other Days" / "Photos" / "Horizontal"
         existing = day_two / "DSC0002.JPG"
         existing.rename(day_two / "DSC0002_2.JPG")
 
@@ -324,7 +326,7 @@ class CopyTests(unittest.TestCase):
         self.assertTrue(any(item["rel"].endswith("NOTCOPIED.JPG") for item in plan["kept"]))
 
         # Removing the drive copy makes the card file ineligible, even if it was copied before.
-        video = self.drive / "2024-01-02" / "Videos" / "Horizontal" / "C0001.MP4"
+        video = self.drive / "Other Days" / "Videos" / "Horizontal" / "C0001.MP4"
         video.unlink()
         plan = organizer.deletion_plan(self.card, self.drive)
         self.assertNotIn("PRIVATE/M4ROOT/CLIP/C0001.MP4", {item["rel"] for item in plan["eligible"]})
@@ -339,7 +341,7 @@ class CopyTests(unittest.TestCase):
         self.assertFalse((self.card / "DCIM" / "100MSDCF" / "DSC0001.JPG").exists())
         self.assertTrue(extra.exists())
         self.assertTrue((self.root / "secret.txt").exists())
-        self.assertTrue((self.drive / "2024-03-15" / "Photos" / "Horizontal" / "DSC0001.JPG").exists())
+        self.assertTrue((self.drive / "Other Days" / "Photos" / "Horizontal" / "DSC0001.JPG").exists())
         # The video whose drive copy was removed is still on the card.
         self.assertTrue((self.card / "PRIVATE" / "M4ROOT" / "CLIP" / "C0001.MP4").exists())
 
@@ -352,16 +354,17 @@ class CopyTests(unittest.TestCase):
         write(self.card / "clipM01.XML", sony_xml("2024-03-15T12:00:00-05:00"))
         report = organizer.run_copy(self.card, self.drive)
         self.assertEqual(report.failed, 0)
-        self.assertTrue((self.drive / "2024-03-15" / "Photos" / "Horizontal" / "wide.JPG").is_file())
-        self.assertTrue((self.drive / "2024-03-15" / "Photos" / "Vertical" / "tall.JPG").is_file())
-        self.assertTrue((self.drive / "2024-03-15" / "Photos" / "Horizontal" / "square.JPG").is_file())
-        self.assertTrue((self.drive / "2024-03-15" / "Videos" / "Vertical" / "clip.MP4").is_file())
-        self.assertTrue((self.drive / "2024-03-15" / "Videos" / "Vertical" / "clipM01.XML").is_file())
+        self.assertTrue((self.drive / "Other Days" / "Photos" / "Horizontal" / "wide.JPG").is_file())
+        self.assertTrue((self.drive / "Other Days" / "Photos" / "Vertical" / "tall.JPG").is_file())
+        self.assertTrue((self.drive / "Other Days" / "Photos" / "Horizontal" / "square.JPG").is_file())
+        self.assertTrue((self.drive / "Other Days" / "Videos" / "Vertical" / "clip.MP4").is_file())
+        self.assertTrue((self.drive / "Other Days" / "Videos" / "Vertical" / "clipM01.XML").is_file())
         self.assertEqual(os.listdir(self.internal), [])
 
-        # A file copied by an older version, sitting directly in Photos, is not copied again.
+        # A file copied by an older version, sitting directly in the day folder, is not copied again.
         legacy = self.drive / "2024-03-15" / "Photos" / "wide.JPG"
-        current = self.drive / "2024-03-15" / "Photos" / "Horizontal" / "wide.JPG"
+        current = self.drive / "Other Days" / "Photos" / "Horizontal" / "wide.JPG"
+        legacy.parent.mkdir(parents=True, exist_ok=True)
         legacy.write_bytes(current.read_bytes())
         current.unlink()
         again = organizer.run_copy(self.card, self.drive)
@@ -370,10 +373,115 @@ class CopyTests(unittest.TestCase):
         self.assertFalse(current.exists())
         self.assertTrue(legacy.is_file())
 
+    def test_small_days_trip_range_and_earlier_copies(self):
+        def photos(day_text, count, stem):
+            for number in range(count):
+                write(
+                    self.card / "DCIM" / f"{stem}{number:04d}.JPG",
+                    jpeg_with_exif(day_text, f"{stem}-{number}".encode()),
+                )
+
+        photos("2024:05:01 10:00:00", 24, "BIG")
+        photos("2024:05:02 10:00:00", 23, "SML")
+        photos("2026:10:15 10:00:00", 24, "TET")
+        photos("2026:10:16 10:00:00", 3, "TIN")
+        photos("2026:10:14 10:00:00", 3, "BEF")
+        photos("2026:10:22 10:00:00", 24, "END")
+        photos("2026:10:23 10:00:00", 24, "AFT")
+
+        earlier = jpeg_with_exif("2026:10:20 11:00:00", b"already-on-drive")
+        write(self.card / "DCIM" / "OLD0001.JPG", earlier)
+        legacy = self.drive / "2026-10-20" / "Photos" / "Horizontal" / "OLD0001.JPG"
+        write(legacy, earlier)
+
+        for number in range(30):
+            write(
+                self.drive / "2024-08-01" / "Photos" / "Horizontal" / f"HAVE{number:04d}.JPG",
+                jpeg_with_exif("2024:08:01 09:00:00", f"have-{number}".encode()),
+            )
+        photos("2024:08:01 12:00:00", 2, "NEW")
+
+        report = organizer.run_copy(self.card, self.drive)
+        self.assertEqual(report.failed, 0)
+        self.assertEqual(report.copied, 127)
+        self.assertEqual(sum(1 for item in report.results if item.action == "skipped"), 1)
+        self.assertTrue((self.drive / "2024-05-01" / "Photos" / "Horizontal" / "BIG0000.JPG").is_file())
+        self.assertFalse((self.drive / "2024-05-02").exists())
+        self.assertTrue((self.drive / "Other Days" / "Photos" / "Horizontal" / "SML0000.JPG").is_file())
+        self.assertTrue((self.drive / "Tetons" / "2026-10-15" / "Photos" / "Horizontal" / "TET0000.JPG").is_file())
+        self.assertTrue((self.drive / "Tetons" / "2026-10-22" / "Photos" / "Horizontal" / "END0000.JPG").is_file())
+        self.assertFalse((self.drive / "Tetons" / "2026-10-16").exists())
+        self.assertTrue((self.drive / "Tetons" / "Other Days" / "Photos" / "Horizontal" / "TIN0000.JPG").is_file())
+        self.assertTrue((self.drive / "Other Days" / "Photos" / "Horizontal" / "BEF0000.JPG").is_file())
+        self.assertFalse((self.drive / "Tetons" / "2026-10-14").exists())
+        self.assertTrue((self.drive / "2026-10-23" / "Photos" / "Horizontal" / "AFT0000.JPG").is_file())
+        self.assertFalse((self.drive / "Tetons" / "2026-10-23").exists())
+        by_name = {item.source.name: item for item in report.results}
+        self.assertEqual(by_name["OLD0001.JPG"].action, "skipped")
+        self.assertEqual(by_name["OLD0001.JPG"].dest, legacy)
+        self.assertFalse((self.drive / "Tetons" / "Other Days" / "Photos" / "Horizontal" / "OLD0001.JPG").exists())
+        self.assertTrue((self.drive / "2024-08-01" / "Photos" / "Horizontal" / "NEW0000.JPG").is_file())
+        self.assertFalse((self.drive / "Other Days" / "Photos" / "Horizontal" / "NEW0000.JPG").exists())
+        self.assertEqual(os.listdir(self.internal), [])
+
+        # A copied file still has to match size and checksum before it can be deleted.
+        plan = organizer.deletion_plan(self.card, self.drive)
+        eligible = {item["rel"] for item in plan["eligible"]}
+        self.assertIn("DCIM/BIG0000.JPG", eligible)
+        self.assertIn("DCIM/OLD0001.JPG", eligible)
+        kept = self.drive / "2024-05-01" / "Photos" / "Horizontal" / "BIG0000.JPG"
+        original = kept.read_bytes()
+        kept.write_bytes(original[:-1] + b"Z")
+        plan = organizer.deletion_plan(self.card, self.drive)
+        self.assertNotIn("DCIM/BIG0000.JPG", {item["rel"] for item in plan["eligible"]})
+        kept.write_bytes(original)
+
+        one = self.root / "card2"
+        drive2 = self.root / "drive2"
+        write(one / "A.JPG", jpeg_with_exif("2026:10:15 10:00:00", b"solo"))
+        park = organizer.Layout(min_day=1, trip_name="Park", trip_start="2026-10-15", trip_end="2026-10-15")
+        moved = organizer.run_copy(one, drive2, layout=park)
+        self.assertEqual(moved.failed, 0)
+        self.assertTrue((drive2 / "Park" / "2026-10-15" / "Photos" / "Horizontal" / "A.JPG").is_file())
+
+        plain = organizer.Layout(min_day=1, trip_name="", trip_start="2026-10-15", trip_end="2026-10-22")
+        drive3 = self.root / "drive3"
+        again = organizer.run_copy(one, drive3, layout=plain)
+        self.assertEqual(again.failed, 0)
+        self.assertTrue((drive3 / "2026-10-15" / "Photos" / "Horizontal" / "A.JPG").is_file())
+        self.assertFalse((drive3 / "Tetons").exists())
+
+        files = organizer.scan_card(self.card)
+        summary = organizer.summarize(files, organizer.Layout(), self.drive)
+        by_day = {day["day"]: day["folder"] for day in summary["days"]}
+        self.assertEqual(by_day["2024-05-01"], "2024-05-01")
+        self.assertEqual(by_day["2024-05-02"], "Other Days")
+        self.assertEqual(by_day["2026-10-15"], "Tetons/2026-10-15")
+        self.assertEqual(by_day["2026-10-16"], "Tetons/Other Days")
+        self.assertEqual(by_day["2026-10-20"], "Tetons/Other Days")
+        self.assertEqual(by_day["2026-10-22"], "Tetons/2026-10-22")
+        self.assertEqual(by_day["2026-10-23"], "2026-10-23")
+        self.assertEqual(by_day["2024-08-01"], "2024-08-01")
+        self.assertEqual(summary["minDay"], 24)
+
+        with self.assertRaises(organizer.OrganizerError):
+            organizer.layout_from_request({"tripStart": "2026-10-22", "tripEnd": "2026-10-15"})
+        with self.assertRaises(organizer.OrganizerError):
+            organizer.layout_from_request({"minDay": "0"})
+        with self.assertRaises(organizer.OrganizerError):
+            organizer.layout_from_request({"tripName": "Other Days"})
+        custom = organizer.layout_from_request({
+            "minDay": "10",
+            "tripName": "Park",
+            "tripStart": "2026-10-01",
+            "tripEnd": "2026-10-02",
+        })
+        self.assertEqual(custom, organizer.Layout(10, "Park", "2026-10-01", "2026-10-02"))
+
     def test_delete_needs_matching_size_and_hash(self):
         write(self.card / "A.JPG", jpeg_oriented("2024:04:04 04:04:04", 4000, 3000, 1, b"abc-photo"))
         organizer.run_copy(self.card, self.drive)
-        dest = self.drive / "2024-04-04" / "Photos" / "Horizontal" / "A.JPG"
+        dest = self.drive / "Other Days" / "Photos" / "Horizontal" / "A.JPG"
         original = dest.read_bytes()
         rel = "A.JPG"
         dest.write_bytes(original[:-1])
@@ -446,6 +554,11 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Delete from the SD card", page)
         self.assertIn("Photos/Vertical", page)
         self.assertIn("Videos/Horizontal", page)
+        self.assertIn("Other Days", page)
+        self.assertIn('value="Tetons"', page)
+        self.assertIn("2026-10-15", page)
+        self.assertIn("2026-10-22", page)
+        self.assertIn('value="24"', page)
         status, headers, body = self.request("GET", "/api/health")
         self.assertEqual(status, 200)
         self.assertTrue(body["ok"])
@@ -471,6 +584,9 @@ class ServerTests(unittest.TestCase):
         body = {"source": str(self.card), "dest": str(self.hdd), "rootName": "Sony"}
         status, _, summary = self.request("POST", "/api/scan", body)
         self.assertEqual(summary["photos"], 2)
+        self.assertEqual({day["folder"] for day in summary["days"]}, {"Other Days"})
+        self.assertEqual(summary["minDay"], 24)
+        self.assertEqual(summary["tripName"], "Tetons")
         status, _, started = self.request("POST", "/api/copy", body)
         self.assertEqual(status, 200)
         job = {}
@@ -482,7 +598,7 @@ class ServerTests(unittest.TestCase):
             time.sleep(0.05)
         self.assertEqual(job["state"], "done")
         self.assertEqual(job["report"]["copied"], 2)
-        saved = self.hdd / "Sony" / "2024-06-01" / "Photos" / "Horizontal" / "DSC0100.JPG"
+        saved = self.hdd / "Sony" / "Other Days" / "Photos" / "Horizontal" / "DSC0100.JPG"
         self.assertTrue(saved.is_file())
         self.assertEqual(saved.read_bytes(), (self.card / "DCIM" / "DSC0100.JPG").read_bytes())
 

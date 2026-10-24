@@ -23,6 +23,12 @@ QT_EPOCH = datetime(1904, 1, 1, tzinfo=timezone.utc)
 MANIFEST_DIR = ".sd-organizer"
 MANIFEST_NAME = "verified.json"
 COPYING_SUFFIX = ".copying"
+OTHER_DAYS = "Other Days"
+DEFAULT_MIN_DAY = 24
+DEFAULT_TRIP_NAME = "Tetons"
+DEFAULT_TRIP_START = "2026-10-15"
+DEFAULT_TRIP_END = "2026-10-22"
+DAY_RE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})$")
 
 PHOTO_EXT = {
     ".jpg", ".jpeg", ".png", ".heic", ".heif", ".arw", ".dng", ".tif", ".tiff",
@@ -89,6 +95,16 @@ class FileResult:
     size: int
     sha256: str
     message: str
+
+
+@dataclass(frozen=True)
+class Layout:
+    """Where a day's files land. Small days share Other Days. A trip gets its own parent folder."""
+
+    min_day: int = DEFAULT_MIN_DAY
+    trip_name: str = DEFAULT_TRIP_NAME
+    trip_start: str = DEFAULT_TRIP_START
+    trip_end: str = DEFAULT_TRIP_END
 
 
 @dataclass
@@ -164,6 +180,50 @@ def sanitize_root_name(name: str) -> str:
     if not ROOT_NAME_RE.fullmatch(cleaned) or "/" in cleaned or "\\" in cleaned:
         raise OrganizerError("The folder name can't include slashes.")
     return cleaned
+
+
+def _parse_day(value: str, label: str) -> str:
+    text = (value or "").strip()
+    match = DAY_RE.fullmatch(text)
+    if not match:
+        raise OrganizerError(f"The {label} needs a date like 2026-10-15.")
+    year, month, day = (int(part) for part in match.groups())
+    try:
+        datetime(year, month, day)
+    except ValueError as exc:
+        raise OrganizerError(f"The {label} is not a real date.") from exc
+    return f"{year:04d}-{month:02d}-{day:02d}"
+
+
+def layout_from_request(data: Optional[dict] = None) -> Layout:
+    """Trip name, trip dates, and the small-day cutoff. Missing fields use the Tetons defaults."""
+    data = data or {}
+    if "tripName" in data:
+        raw_name = str(data.get("tripName") or "").strip()
+    else:
+        raw_name = DEFAULT_TRIP_NAME
+    if raw_name:
+        trip_name = sanitize_root_name(raw_name)
+        if trip_name == OTHER_DAYS:
+            raise OrganizerError("The trip name can't be Other Days.")
+    else:
+        trip_name = ""
+    start = _parse_day(str(data.get("tripStart") or DEFAULT_TRIP_START), "trip start")
+    end = _parse_day(str(data.get("tripEnd") or DEFAULT_TRIP_END), "trip end")
+    if start > end:
+        raise OrganizerError("The trip end date is before the start date.")
+    raw_min = data.get("minDay", DEFAULT_MIN_DAY)
+    if raw_min is None or (isinstance(raw_min, str) and not raw_min.strip()):
+        raw_min = DEFAULT_MIN_DAY
+    try:
+        min_day = int(str(raw_min).strip())
+    except (TypeError, ValueError) as exc:
+        raise OrganizerError("The day size has to be a whole number.") from exc
+    if str(raw_min).strip() != str(min_day):
+        raise OrganizerError("The day size has to be a whole number.")
+    if min_day < 1 or min_day > 100000:
+        raise OrganizerError("The day size has to be at least 1.")
+    return Layout(min_day, trip_name, start, end)
 
 
 def destination_root(volume: Path, root_name: str) -> Path:
@@ -927,7 +987,69 @@ def scan_card(root: Path) -> List[MediaFile]:
     return ordered
 
 
-def summarize(files: List[MediaFile]) -> dict:
+def _in_trip(day: str, layout: Layout) -> bool:
+    return bool(layout.trip_name) and layout.trip_start <= day <= layout.trip_end
+
+
+def _bucket(day: str, count: int, layout: Layout) -> str:
+    """Folder under the drive root, above Photos or Videos."""
+    small = count < layout.min_day
+    if _in_trip(day, layout):
+        return f"{layout.trip_name}/{OTHER_DAYS}" if small else f"{layout.trip_name}/{day}"
+    return OTHER_DAYS if small else day
+
+
+def _media_names_on_card(files: List[MediaFile]) -> Tuple[Dict[str, int], Dict[str, set]]:
+    counts: Dict[str, int] = {}
+    names: Dict[str, set] = {}
+    for item in files:
+        if item.kind not in ("photo", "video"):
+            continue
+        counts[item.day] = counts.get(item.day, 0) + 1
+        names.setdefault(item.day, set()).add(item.name)
+    return counts, names
+
+
+def _existing_day_extra(dest_root: Path, day: str, layout: Layout, card_names: set) -> int:
+    """Photos and videos already in this day's own folder, not counting the card's names twice.
+
+    Other Days is not included. A later card still joins a day folder that already
+    holds enough files. Files that were stored under the old day path count too.
+    """
+    folders = [Path(dest_root) / day]
+    if layout.trip_name:
+        folders.append(Path(dest_root) / layout.trip_name / day)
+    found = set()
+    for folder in folders:
+        if not folder.is_dir():
+            continue
+        for dirpath, dirnames, filenames in os.walk(folder, followlinks=False):
+            dirnames[:] = [name for name in dirnames if not _skip_dir(name) and not name.startswith(".")]
+            for name in filenames:
+                if name.startswith(".") or name.endswith(COPYING_SUFFIX) or name in card_names:
+                    continue
+                path = Path(dirpath) / name
+                if path.is_symlink():
+                    continue
+                try:
+                    if path.is_file() and kind_of(path) in ("photo", "video"):
+                        found.add(name)
+                except OSError:
+                    continue
+    return len(found)
+
+
+def assign_folders(files: List[MediaFile], layout: Layout, dest_root: Path) -> Dict[str, str]:
+    """Camera day -> folder under the drive root. Sidecars follow their day's folder."""
+    counts, names = _media_names_on_card(files)
+    folders: Dict[str, str] = {}
+    for day in {item.day for item in files}:
+        count = counts.get(day, 0) + _existing_day_extra(dest_root, day, layout, names.get(day, set()))
+        folders[day] = _bucket(day, count, layout)
+    return folders
+
+
+def summarize(files: List[MediaFile], layout: Optional[Layout] = None, dest_root: Optional[Path] = None) -> dict:
     days: Dict[str, dict] = {}
     fallback = 0
     for item in files:
@@ -948,13 +1070,22 @@ def summarize(files: List[MediaFile]) -> dict:
         bucket["bytes"] += item.size
         if item.date_source == "file":
             fallback += 1
+    chosen = layout or Layout()
+    buckets = assign_folders(files, chosen, Path(dest_root) if dest_root else Path("/nonexistent-sd-organizer-dest"))
+    for bucket in days.values():
+        bucket["folder"] = buckets.get(bucket["day"], bucket["day"])
+    ordered = [days[key] for key in sorted(days)]
     return {
         "photos": sum(1 for f in files if f.kind == "photo"),
         "videos": sum(1 for f in files if f.kind == "video"),
         "sidecars": sum(1 for f in files if f.kind == "sidecar"),
         "bytes": sum(f.size for f in files),
         "fallbackDates": fallback,
-        "days": [days[key] for key in sorted(days)],
+        "minDay": chosen.min_day,
+        "tripName": chosen.trip_name,
+        "tripStart": chosen.trip_start,
+        "tripEnd": chosen.trip_end,
+        "days": ordered,
     }
 
 
@@ -1073,23 +1204,49 @@ def _orientation_name(item: MediaFile) -> str:
 
 def _same_size_under(folder: Path, size: int) -> List[Path]:
     """Same-size files already stored for this day, including the older Photos/Videos layout."""
-    if not folder.is_dir():
-        return []
-    found = []
-    for dirpath, dirnames, filenames in os.walk(folder, followlinks=False):
-        dirnames[:] = [name for name in dirnames if not _skip_dir(name) and not name.startswith(".")]
-        for name in filenames:
-            if name.startswith(".") or name.endswith(COPYING_SUFFIX):
-                continue
-            path = Path(dirpath) / name
-            if path.is_symlink():
-                continue
-            try:
-                if path.is_file() and path.stat().st_size == size:
-                    found.append(path)
-            except OSError:
-                continue
-    return found
+    return _files_by_size(folder, {}).get(size, [])
+
+
+def _files_by_size(folder: Path, cache: Dict[str, Dict[int, List[Path]]]) -> Dict[int, List[Path]]:
+    """Every real file under folder, grouped by size. The walk is remembered for this copy."""
+    key = str(folder)
+    grouped = cache.get(key)
+    if grouped is None:
+        grouped = {}
+        if folder.is_dir():
+            for dirpath, dirnames, filenames in os.walk(folder, followlinks=False):
+                dirnames[:] = [name for name in dirnames if not _skip_dir(name) and not name.startswith(".")]
+                for name in filenames:
+                    if name.startswith(".") or name.endswith(COPYING_SUFFIX):
+                        continue
+                    path = Path(dirpath) / name
+                    if path.is_symlink():
+                        continue
+                    try:
+                        if path.is_file():
+                            grouped.setdefault(path.stat().st_size, []).append(path)
+                    except OSError:
+                        continue
+        cache[key] = grouped
+    return grouped
+
+
+def _skip_roots(dest_root: Path, day: str, bucket: str, layout: Layout) -> List[Path]:
+    """Folders that may already hold this file: the new place, the old day folder, and Other Days."""
+    rels = [bucket, day, OTHER_DAYS]
+    if layout.trip_name:
+        rels.append(f"{layout.trip_name}/{day}")
+        rels.append(f"{layout.trip_name}/{OTHER_DAYS}")
+    roots: List[Path] = []
+    seen = set()
+    for rel in rels:
+        path = dest_root.joinpath(*rel.split("/"))
+        key = str(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        roots.append(path)
+    return roots
 
 
 def _unique_name(folder: Path, preferred: str) -> str:
@@ -1186,15 +1343,33 @@ def place_file(
     cache: Dict[Tuple[str, int, int], str],
     manifest: dict,
     on_fraction: Optional[Callable[[float, str], None]] = None,
+    layout: Optional[Layout] = None,
+    buckets: Optional[Dict[str, str]] = None,
+    size_index: Optional[Dict[str, Dict[int, List[Path]]]] = None,
 ) -> FileResult:
+    chosen = layout or Layout()
+    if buckets is None:
+        buckets = assign_folders([item], chosen, dest_root)
+    if size_index is None:
+        size_index = {}
+    bucket = buckets.get(item.day) or _bucket(item.day, 0, chosen)
     folder_name = "Photos" if item.kind == "photo" else "Videos"
     orient = _orientation_name(item)
-    dest_dir = dest_root / item.day / folder_name / orient
+    dest_dir = dest_root.joinpath(*bucket.split("/"), folder_name, orient)
     if not _contains(dest_root, dest_dir):
         raise OrganizerError("Refusing to write outside the folder you picked.")
     rel = _relative(item.path, source_root)
-    # Look through the whole day, so a copy from before Vertical/Horizontal is not copied again.
-    same_size = _same_size_under(dest_root / item.day, item.size)
+    # Also look in the old day folder and in Other Days, so a file copied before
+    # this layout is not copied a second time.
+    same_size: List[Path] = []
+    seen_paths = set()
+    for root in _skip_roots(dest_root, item.day, bucket, chosen):
+        for existing in _files_by_size(root, size_index).get(item.size, []):
+            key = str(existing)
+            if key in seen_paths:
+                continue
+            seen_paths.add(key)
+            same_size.append(existing)
     source_hash: Optional[str] = None
     if same_size:
         hashed = 0
@@ -1216,6 +1391,7 @@ def place_file(
                     "sourceRel": rel,
                     "kind": item.kind,
                     "day": item.day,
+                    "folder": bucket,
                     "orientation": orient,
                     "verified": True,
                 })
@@ -1244,6 +1420,7 @@ def place_file(
 
     digest = copy_verified(item.path, dest, known_hash=source_hash, on_chunk=_wrote)
     cache[_hash_cache_key(dest)] = digest
+    _files_by_size(dest_root.joinpath(*bucket.split("/")), size_index).setdefault(item.size, []).append(dest)
     _remember(manifest, {
         "sha256": digest,
         "size": item.size,
@@ -1252,10 +1429,11 @@ def place_file(
         "sourceRel": rel,
         "kind": item.kind,
         "day": item.day,
+        "folder": bucket,
         "orientation": orient,
         "verified": True,
     })
-    landed = f"{item.day}/{folder_name}/{orient}"
+    landed = f"{bucket}/{folder_name}/{orient}"
     if action == "renamed":
         message = (
             f"Saved {item.name} as {final_name} in {landed} — a different file already used that name, so it was not overwritten."
@@ -1272,12 +1450,16 @@ def run_copy(
     source_root: Path,
     dest_root: Path,
     on_progress: Optional[Callable[[dict], None]] = None,
+    layout: Optional[Layout] = None,
 ) -> CopyReport:
     source_root = Path(source_root).resolve()
     dest_root = Path(dest_root).resolve()
+    chosen = layout or Layout()
     if source_root == dest_root or source_root in dest_root.parents or dest_root in source_root.parents:
         raise OrganizerError("The card and the folder on the drive have to be different places.")
     files = scan_card(source_root)
+    buckets = assign_folders(files, chosen, dest_root)
+    size_index: Dict[str, Dict[int, List[Path]]] = {}
     total_bytes = sum(item.size for item in files)
     report = CopyReport()
 
@@ -1306,7 +1488,10 @@ def run_copy(
             progress(phase, base + int(size * fraction), index - 1, name)
 
         try:
-            result = place_file(item, source_root, dest_root, cache, manifest, on_fraction)
+            result = place_file(
+                item, source_root, dest_root, cache, manifest, on_fraction,
+                chosen, buckets, size_index,
+            )
         except DiskFull as exc:
             result = FileResult(
                 item.path, _relative(item.path, source_root), None, "",
