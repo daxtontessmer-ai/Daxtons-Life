@@ -61,6 +61,8 @@
            padding:0 16px; max-width:640px; margin:0 auto; animation:rise .5s 0s cubic-bezier(.2,.7,.2,1) both;
            bottom:0; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; pointer-events:none; }
     .rel > * { pointer-events:auto; }
+    /* With a dropdown open the whole pill area must take touches, or iPhones can't scroll it */
+    .rel.has-open { pointer-events:auto; }
     .pill { display:inline-flex; align-items:center; gap:8px; font:inherit; font-size:14px; font-weight:600;
             color:var(--ink); background:rgba(20,20,20,.55); border:1px solid rgba(244,241,234,.22);
             border-radius:999px; padding:9px 16px; cursor:pointer; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
@@ -881,14 +883,9 @@
               select.setAttribute("aria-label", "Move " + it.name + " to group");
               relationshipGroups.forEach(([key,title]) => { const o=el("option",null,title);o.value=key;select.append(o); });
               select.value=groupFor(it.id); select.onchange=()=>moveRelationship(it.id,select.value);label.append(select);
-              const siblings=orderedItems, at=siblings.findIndex(p=>p.id===it.id);
-              const up=el("button","rm","↑ Up"), down=el("button","rm","↓ Down"), edit=el("button","rm","Edit name");
-              up.type=down.type=edit.type="button";up.disabled=at===0;down.disabled=at===siblings.length-1;
-              up.setAttribute("aria-label","Move "+it.name+" up");down.setAttribute("aria-label","Move "+it.name+" down");
-              up.onclick=()=>moveRelationship(it.id,relationshipGroup,siblings[at-1].id);
-              down.onclick=()=>moveRelationship(it.id,relationshipGroup,siblings[at+2]?.id||null);
+              const edit=el("button","rm","Edit name"); edit.type="button";
               edit.onclick=()=>{ editing={id:it.id,rename:true,text:it.name,armed:false};render(); };
-              tools.append(label,up,down,edit);box.append(tools);
+              tools.append(label,edit);box.append(tools);
             }
             (it.notes || []).forEach((t, i) => {
               const n = el("li", "note");
@@ -1100,6 +1097,7 @@
           if (!seenOpen.has(pn)) { seenOpen.add(pn); newlyOpened = pn; }
         } else pn.style.maxHeight = "";
       });
+      rel.classList.toggle("has-open", anyOpen);
       if (newlyOpened) {
         const y = newlyOpened.getBoundingClientRect().top - relTop + rel.scrollTop - ABOVE;
         rel.scrollTo({ top: Math.max(0, y), behavior: "smooth" });

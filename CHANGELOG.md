@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-24
 
+- **4:15 PM CT — v51: scrolling works with a pill open, Up/Down buttons gone** (Claude, `main`)
+  Opening a pill no longer locks the screen: you can scroll the dropdown and back up to the pills again. Removed the ↑ Up and ↓ Down buttons from inside the Relationships pill (hold-and-drag still reorders people).
+
 - **11:25 AM CT — v50: dropdowns open below every pill** (Claude, `main`)
   Tapping any pill (main pills, the + pill, and the Links pills) now opens its dropdown at the bottom, below all the pills including the Links section. The dropdown scrolls with the whole page, so you can scroll back up to see every pill without closing it, then tap another pill to switch or tap the same pill to close.
 
