@@ -4,6 +4,8 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-23
 
+- **11:25 PM CT — v48: SD Organizer pill at the top, and the Applications start path** (`testing`)
+  The first pill in Life is now labeled SD Organizer. Tapping it checks http://127.0.0.1:8765/api/health. If the helper answers, the organizer opens in a new tab. If it does not, Daxton's Life stays open and shows how to start it: double-click ~/Applications/sd-card-organizer/Organize SD Card.command.   The service worker is v48 so the phone picks up this page instead of a saved copy. Not on `main` yet.
 - **9:10 PM CT — v47: organizer stays in the app when it isn't running, and sorts Vertical / Horizontal** (`testing`)
   Tapping Organize SD card on the iPhone, or on the Mac when the helper isn't running, stays in Daxton's Life and explains how to start it (double-click Organize SD Card.command). It no longer opens http://127.0.0.1:8765, which was the browser error page. Photos and videos now go in Sony/YYYY-MM-DD/Photos/Vertical or Horizontal, and the same for Videos. Taller than wide, after the camera rotation, is Vertical. A square is Horizontal. Each copy is still checked by size and checksum, and delete is still a separate button. Not on `main` yet.
 

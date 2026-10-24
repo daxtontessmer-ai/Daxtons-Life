@@ -1172,7 +1172,7 @@
       $("pillDelete").hidden = !!spec.creating;
       $("pillDelete").textContent = "Delete";
       $("pillSave").textContent = spec.creating ? "Add" : "Save";
-      $("pillMsg").textContent = spec.id === "organizer"
+      $("pillMsg").textContent = spec.id === "sd-organizer" || spec.id === "organizer"
         ? "Deleting hides this pill. Bring it back from the + pill."
         : (spec.kind === "section" || spec.kind === "menu" ? "Deleting hides this pill and keeps what is inside it. Bring it back from the + pill." : "");
       $("pillSheet").hidden = false;
@@ -1213,7 +1213,7 @@
     }
     function deletePillEdit() {
       const spec = pillEdit; if (!spec) return;
-      if (!pillDelArmed) { pillDelArmed = true; $("pillDelete").textContent = "Tap again to delete"; $("pillMsg").textContent = spec.id === "organizer" ? "Tap again to hide this pill." : (spec.kind === "custom" || spec.kind === "link" ? "Tap again to delete this pill." : "Tap again to hide this pill. What is inside it stays saved."); return; }
+      if (!pillDelArmed) { pillDelArmed = true; $("pillDelete").textContent = "Tap again to delete"; $("pillMsg").textContent = spec.id === "sd-organizer" || spec.id === "organizer" ? "Tap again to hide this pill." : (spec.kind === "custom" || spec.kind === "link" ? "Tap again to delete this pill." : "Tap again to hide this pill. What is inside it stays saved."); return; }
       if (spec.kind === "custom") { const id = spec.id; closePillEdit(); deletePill(id, true); return; }
       if (spec.kind === "link") { const r = sect("linkpills").find(i => i.id === spec.id); if (r) { r.deleted = true; r.updated = now(); changed(); } closePillEdit(); return; }
       const list = sect("pilltitles");
@@ -1256,7 +1256,7 @@
         b.onclick = () => { kind = k; linkIn.hidden = k !== "link"; pick.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); upd(); };
         b.setAttribute("aria-pressed", k === kind); return b; };
       pick.append(opt("flat", "Simple list", "Like Lessons"), opt("notes", "List with notes", "Like Work"), opt("link", "Link", "Opens a page"));
-      const tip = el("p", "plus-tip", "Open a pill and tap Edit pill to rename it. Link pills (Portfolio, Photo editor, Shot List) have an Edit button for the name and the link. Organize SD card has an Edit button for its name.");
+      const tip = el("p", "plus-tip", "Open a pill and tap Edit pill to rename it. Link pills (Portfolio, Photo editor, Shot List) have an Edit button for the name and the link. SD Organizer has an Edit button for its name.");
       hiddenHost = el("div");
       plusPanel.append(f, linkIn, pick, tip, hiddenHost);
       inp.oninput = upd; linkIn.oninput = upd; upd();
@@ -1338,17 +1338,20 @@
       if (withSub) { const li = el("li", "link-row"); li.append(a, gear); return li; }
       const wrap = el("span", "pill-wrap"); wrap.append(a, gear); return wrap;
     }
-    // Organize SD card runs on the MacBook. Never navigate to localhost unless it just answered.
+    // SD Organizer runs on the MacBook. Never navigate to localhost unless it just answered.
     const ORGANIZER = "http://127.0.0.1:8765/";
+    const ORGANIZER_ID = "sd-organizer";
     function orgName() {
-      const m = (data.sections.pilltitles || []).find(i => i.id === "organizer");
-      return (m && m.name) || "Organize SD card";
+      const m = (data.sections.pilltitles || []).find(i => i.id === ORGANIZER_ID);
+      const saved = m && m.name;
+      if (!saved || saved === "Organize SD card") return "SD Organizer";
+      return saved;
     }
     const orgSheet = el("div", "sheet"); orgSheet.hidden = true; orgSheet.id = "orgSheet";
     const orgCard = el("div", "sheet-card"); orgCard.setAttribute("role", "dialog"); orgCard.setAttribute("aria-labelledby", "orgTitle");
     const orgTitle = el("h2", null, "This runs on your MacBook"); orgTitle.id = "orgTitle";
     const orgWhy = el("p"), orgHow = el("p"), orgWhere = el("p");
-    orgHow.innerHTML = "<b>How to start it on the MacBook</b><br>1. Plug the SD card and the hard drive into the MacBook.<br>2. Open the Daxton's Life folder, then <b>sd-card-organizer</b>.<br>3. Double-click <b>Organize SD Card.command</b>.<br>4. If the Mac says it can't be opened, Control-click it and choose Open.<br>Leave that window open while it copies. Then tap Organize SD card again.";
+    orgHow.innerHTML = "<b>How to start it on the MacBook</b><br>1. Plug the SD card and the hard drive into the MacBook.<br>2. In Finder, open <b>Applications</b>, then the folder <b>sd-card-organizer</b>.<br>3. Double-click <b>Organize SD Card.command</b>.<br>The file is <b>~/Applications/sd-card-organizer/Organize SD Card.command</b>.<br>4. If the Mac says it can't be opened, Control-click it and choose Open.<br>Leave that window open while it copies. Then tap SD Organizer again.";
     orgWhere.innerHTML = "<b>Where the files go</b><br>Hard drive / Sony / YYYY-MM-DD / Photos / Vertical<br>Hard drive / Sony / YYYY-MM-DD / Photos / Horizontal<br>Hard drive / Sony / YYYY-MM-DD / Videos / Vertical<br>Hard drive / Sony / YYYY-MM-DD / Videos / Horizontal<br>A taller photo or video goes in Vertical. A square goes in Horizontal. This copy only works on the Mac, not the iPhone.";
     const orgActions = el("div", "sheet-actions");
     const orgOpen = el("button", "add", "Open the organizer");
@@ -1371,7 +1374,7 @@
         ? "You're on the iPhone. This only works on the MacBook. The iPhone can't see an SD card or hard drive plugged into the Mac, so this stays here instead of opening an error page."
         : (running
           ? "The organizer is running on this Mac."
-          : "The organizer isn't running, so this stayed on Daxton's Life instead of opening an error page. Start it on the MacBook with the steps below, then tap Organize SD card again. It does not work on the iPhone.");
+          : "The organizer isn't running, so this stayed on Daxton's Life instead of opening an error page. Start it on the MacBook with the steps below, then tap SD Organizer again. It does not work on the iPhone.");
       closePillEdit();
       orgSheet.hidden = false;
     }
@@ -1403,22 +1406,22 @@
     }
     function orgRow() {
       const name = orgName();
-      const wrap = el("span", "pill-wrap"), btn = el("button", "pill"); btn.type = "button";
+      const wrap = el("span", "pill-wrap sd-organizer"), btn = el("button", "pill"); btn.type = "button";
       btn.append(document.createTextNode(name + " "));
       btn.insertAdjacentHTML("beforeend", '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>');
       btn.onclick = () => openOrganizer();
       const gear = el("button", "pill-gear", "Edit"); gear.type = "button"; gear.setAttribute("aria-label", "Edit " + name);
-      gear.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); orgSheet.hidden = true; openPillEdit({ kind:"menu", id:"organizer", name, hasLink:false, hasSub:false }); };
+      gear.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); orgSheet.hidden = true; openPillEdit({ kind:"menu", id:ORGANIZER_ID, name, hasLink:false, hasSub:false }); };
       wrap.append(btn, gear);
       return wrap;
     }
     function renderLinks() {
-      document.querySelectorAll("#linkPills .pill-wrap, #projPills .pill-wrap").forEach(n => n.remove());
+      document.querySelectorAll("#linkPills .pill-wrap, #projPills .pill-wrap, .sd-organizer").forEach(n => n.remove());
       const live = (data.sections.linkpills || []).filter(i => i && !i.deleted);
       const cmp = [...linkPills.children].find(n => n.tagName === "BUTTON" && (n.textContent || "").includes("Compare versions"));
       live.filter(i => i.direct && i.group === "links").sort((a, b) => (a.created || 0) - (b.created || 0)).forEach(item => linkPills.insertBefore(linkRow(item, false), cmp || null));
-      const orgRec = (data.sections.pilltitles || []).find(i => i.id === "organizer");
-      if (!(orgRec && orgRec.deleted)) linkPills.insertBefore(orgRow(), cmp || null);
+      const orgRec = (data.sections.pilltitles || []).find(i => i.id === ORGANIZER_ID);
+      if (!(orgRec && orgRec.deleted)) pillsBox.insertBefore(orgRow(), pillsBox.firstChild);
       live.filter(i => i.direct && i.group === "proj").sort((a, b) => (a.created || 0) - (b.created || 0)).forEach(item => $("projPills").insertBefore(linkRow(item, false), shotBtn));
       const title = (data.sections.pilltitles || []).find(i => i.id === "shotlist");
       const hidden = !!(title && title.deleted);
@@ -1437,8 +1440,8 @@
       SECTIONS.forEach(c => { const m = (data.sections.pilltitles || []).find(i => i.id === c.key); if (m && m.deleted) items.push({ label: m.name || c.title, rec: m }); });
       const shot = (data.sections.pilltitles || []).find(i => i.id === "shotlist");
       if (shot && shot.deleted) items.push({ label: shot.name || "Shot List", rec: shot });
-      const org = (data.sections.pilltitles || []).find(i => i.id === "organizer");
-      if (org && org.deleted) items.push({ label: org.name || "Organize SD card", rec: org });
+      const org = (data.sections.pilltitles || []).find(i => i.id === ORGANIZER_ID);
+      if (org && org.deleted) items.push({ label: org.name || "SD Organizer", rec: org });
       (data.sections.linkpills || []).filter(i => i.deleted).forEach(i => items.push({ label: i.name || "Link", rec: i }));
       if (!items.length) return;
       hiddenHost.append(el("p", "plus-tip", "Hidden pills — tap one to bring it back."));
@@ -1476,6 +1479,7 @@
       document.body.append(b);
     });
     navigator.serviceWorker.register("sw.js").then(reg => {
+      if (reg.update) reg.update();
       document.addEventListener("visibilitychange", () => { if (!document.hidden && reg.update) reg.update(); });
     }).catch(() => {});
     if (navigator.serviceWorker.startMessages) navigator.serviceWorker.startMessages();
