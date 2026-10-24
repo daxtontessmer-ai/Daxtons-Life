@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-24
 
+- **11:25 AM CT — v50: dropdowns open below every pill** (Claude, `main`)
+  Tapping any pill (main pills, the + pill, and the Links pills) now opens its dropdown at the bottom, below all the pills including the Links section. The dropdown scrolls with the whole page, so you can scroll back up to see every pill without closing it, then tap another pill to switch or tap the same pill to close.
+
 - **6:07 AM CT — v49: tap outside a dropdown to close it** (Claude, `main`)
   With a dropdown open, tap anywhere outside the box (like the space at the top of the screen) and it closes and slides all the pills back down. Taps inside the box work as before.
 

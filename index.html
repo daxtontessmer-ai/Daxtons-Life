@@ -250,6 +250,9 @@
     .pill-plus { padding:9px 15px; font-size:17px; line-height:1; }
     .sub-box { margin:0 0 12px; padding-bottom:12px; border-bottom:1px solid rgba(244,241,234,.12); }
     .sub-box .panel { background:rgba(244,241,234,.04); }
+    /* Dropdowns sit below every pill and scroll with the whole page, so you can scroll up to the pills while one stays open */
+    #panels > .panel, #linkPanels > .panel, .rel .panel .panel { max-height:none; overflow:visible; }
+    #panels > .panel, #linkPanels > .panel { margin-top:14px; margin-bottom:24px; }
     .pill.dragging { opacity:.35; }
     .pill.drop-on { border-color:#7fd18b; background:rgba(127,209,139,.25); transform:scale(1.06); }
     .drag-ghost { position:fixed; z-index:50; pointer-events:none; transform:translate(-50%,-50%) scale(1.08); box-shadow:0 10px 30px rgba(0,0,0,.5); margin:0; }
@@ -288,12 +291,12 @@
   </div>
   <section class="rel" id="rel">
     <div class="pills" id="pills"></div>
-    <div id="panels"></div>
     <div class="links-sec" id="linksSec">
       <div class="sec-label">Links</div>
       <div class="pills" id="linkPills"></div>
-      <div id="linkPanels"></div>
     </div>
+    <div id="panels"></div>
+    <div id="linkPanels"></div>
   </section>
   <div class="sheet" id="syncSheet" hidden>
     <div class="sheet-card" role="dialog" aria-labelledby="syncTitle">
@@ -569,9 +572,9 @@
             }
           }
           // Scroll the panel while keeping the group buttons available at its top.
-          const rect = panel.getBoundingClientRect();
-          if (e.clientY > rect.bottom - 45) panel.scrollTop += 14;
-          else if (e.clientY < rect.top + 45) panel.scrollTop -= 14;
+          const scroller = panel.scrollHeight > panel.clientHeight + 2 ? panel : $("rel"), rect = scroller.getBoundingClientRect();
+          if (e.clientY > rect.bottom - 45) scroller.scrollTop += 14;
+          else if (e.clientY < rect.top + 45) scroller.scrollTop -= 14;
         };
         document.addEventListener("pointermove", updateDrop);
         document.addEventListener("touchmove", e => { if (relationshipDrag) e.preventDefault(); }, {passive:false});
@@ -1089,15 +1092,13 @@
       let newlyOpened = null, anyOpen = false;
       document.querySelectorAll(".rel .panel").forEach(pn => {
         const topLevel = pn.parentNode.id === "panels" || pn.parentNode.id === "linkPanels";
-        if (pn.hidden) { seenOpen.delete(pn); return; }
+        if (pn.hidden) { seenOpen.delete(pn); pn.style.minHeight = ""; return; }
         if (topLevel) {
           anyOpen = true;
-          pn.style.maxHeight = Math.max(240, Math.floor(vh - relTop - ABOVE - 16)) + "px";
+          pn.style.maxHeight = "";
+          pn.style.minHeight = Math.max(240, Math.floor(vh - relTop - ABOVE - 40)) + "px";
           if (!seenOpen.has(pn)) { seenOpen.add(pn); newlyOpened = pn; }
-        } else {
-          const top = pn.getBoundingClientRect().top;
-          pn.style.maxHeight = Math.max(180, Math.floor(vh - top - 12)) + "px";
-        }
+        } else pn.style.maxHeight = "";
       });
       if (newlyOpened) {
         const y = newlyOpened.getBoundingClientRect().top - relTop + rel.scrollTop - ABOVE;
