@@ -4,6 +4,8 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-23
 
+- **11:50 PM CT — SD organizer: small days share Other Days, and Tetons gets a folder** (`testing`)
+  A day with fewer than 24 photos and videos goes in Sony/Other Days, still split into Photos or Videos and Vertical or Horizontal. October 15 through October 22, 2026 goes in Sony/Tetons. A small day in that range goes in Sony/Tetons/Other Days. The trip name, the dates, and 24 can be changed on the organizer page, and Look at the card shows the folder each day will use. A file already copied into an older day folder is recognized and not copied again. Delete still needs a matching size and checksum, and it is still a separate button. Not on `main` yet.
 - **11:25 PM CT — v48: SD Organizer pill at the top, and the Applications start path** (`testing`)
   The first pill in Life is now labeled SD Organizer. Tapping it checks http://127.0.0.1:8765/api/health. If the helper answers, the organizer opens in a new tab. If it does not, Daxton's Life stays open and shows how to start it: double-click ~/Applications/sd-card-organizer/Organize SD Card.command.   The service worker is v48 so the phone picks up this page instead of a saved copy. Not on `main` yet.
 - **9:10 PM CT — v47: organizer stays in the app when it isn't running, and sorts Vertical / Horizontal** (`testing`)
