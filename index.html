@@ -1324,7 +1324,7 @@
       if (withSub) { const li = el("li", "link-row"); li.append(a, gear); return li; }
       const wrap = el("span", "pill-wrap"); wrap.append(a, gear); return wrap;
     }
-    // Organize SD card runs on the MacBook. The iPhone only gets instructions. It is a button, not a link, so a phone never navigates to localhost.
+    // Organize SD card runs on the MacBook. Never navigate to localhost unless it just answered.
     const ORGANIZER = "http://127.0.0.1:8765/";
     function orgName() {
       const m = (data.sections.pilltitles || []).find(i => i.id === "organizer");
@@ -1333,36 +1333,58 @@
     const orgSheet = el("div", "sheet"); orgSheet.hidden = true; orgSheet.id = "orgSheet";
     const orgCard = el("div", "sheet-card"); orgCard.setAttribute("role", "dialog"); orgCard.setAttribute("aria-labelledby", "orgTitle");
     const orgTitle = el("h2", null, "This runs on your MacBook"); orgTitle.id = "orgTitle";
-    const orgWhy = el("p"), orgHow = el("p");
-    orgHow.innerHTML = "<b>How to start it</b><br>1. Plug the SD card and the hard drive into the MacBook.<br>2. Open the Daxton's Life folder, then <b>sd-card-organizer</b>.<br>3. Double-click <b>Organize SD Card.command</b>.<br>4. If the Mac says it can't be opened, Control-click it and choose Open.<br>Leave that window open while it copies. Then tap Organize SD card again.";
+    const orgWhy = el("p"), orgHow = el("p"), orgWhere = el("p");
+    orgHow.innerHTML = "<b>How to start it on the MacBook</b><br>1. Plug the SD card and the hard drive into the MacBook.<br>2. Open the Daxton's Life folder, then <b>sd-card-organizer</b>.<br>3. Double-click <b>Organize SD Card.command</b>.<br>4. If the Mac says it can't be opened, Control-click it and choose Open.<br>Leave that window open while it copies. Then tap Organize SD card again.";
+    orgWhere.innerHTML = "<b>Where the files go</b><br>Hard drive / Sony / YYYY-MM-DD / Photos / Vertical<br>Hard drive / Sony / YYYY-MM-DD / Photos / Horizontal<br>Hard drive / Sony / YYYY-MM-DD / Videos / Vertical<br>Hard drive / Sony / YYYY-MM-DD / Videos / Horizontal<br>A taller photo or video goes in Vertical. A square goes in Horizontal. This copy only works on the Mac, not the iPhone.";
     const orgActions = el("div", "sheet-actions");
-    const orgOpen = el("a", "add", "Open the organizer");
-    orgOpen.href = ORGANIZER; orgOpen.target = "_blank"; orgOpen.rel = "noopener";
-    orgOpen.style.cssText = "display:inline-flex;align-items:center;text-decoration:none;padding:8px 16px";
+    const orgOpen = el("button", "add", "Open the organizer");
+    orgOpen.type = "button";
+    orgOpen.hidden = true;
+    orgOpen.onclick = () => { const popup = window.open(ORGANIZER, "_blank", "noopener"); if (popup) orgSheet.hidden = true; };
     const orgClose = el("button", "rm", "Close"); orgClose.type = "button";
     orgClose.onclick = () => { orgSheet.hidden = true; };
     orgActions.append(orgOpen, orgClose);
-    orgCard.append(orgTitle, orgWhy, orgHow, orgActions);
+    orgCard.append(orgTitle, orgWhy, orgHow, orgWhere, orgActions);
     orgSheet.append(orgCard);
     orgSheet.addEventListener("click", e => { if (e.target === orgSheet) orgSheet.hidden = true; });
     document.body.append(orgSheet);
-    const orgIos = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    function showOrganizer(kind) {
+    const orgIos = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+      || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+      || (navigator.userAgentData && navigator.userAgentData.mobile);
+    function showOrganizer(kind, running) {
+      orgOpen.hidden = !running;
       orgWhy.textContent = kind === "iphone"
-        ? "You're on the iPhone. It can't see an SD card or hard drive plugged into the Mac, so the copy has to happen on the MacBook."
-        : "The organizer isn't running yet, or this page couldn't reach it. Start it on the MacBook with the steps below. If it is already open, use Open the organizer.";
-      orgOpen.hidden = kind === "iphone";
+        ? "You're on the iPhone. This only works on the MacBook. The iPhone can't see an SD card or hard drive plugged into the Mac, so this stays here instead of opening an error page."
+        : (running
+          ? "The organizer is running on this Mac."
+          : "The organizer isn't running, so this stayed on Daxton's Life instead of opening an error page. Start it on the MacBook with the steps below, then tap Organize SD card again. It does not work on the iPhone.");
       closePillEdit();
       orgSheet.hidden = false;
     }
+    function organizerUrl(value) {
+      try {
+        const url = new URL(value, location.href);
+        return (url.hostname === "127.0.0.1" || url.hostname === "localhost") && url.port === "8765";
+      } catch (e) { return false; }
+    }
+    document.addEventListener("click", ev => {
+      const link = ev.target && ev.target.closest ? ev.target.closest("a[href]") : null;
+      if (!link || !organizerUrl(link.href)) return;
+      ev.preventDefault();
+      openOrganizer();
+    }, true);
     function openOrganizer() {
-      if (orgIos) { showOrganizer("iphone"); return; }
+      if (orgIos) { showOrganizer("iphone", false); return; }
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 1500);
       fetch(ORGANIZER + "api/health", { signal: ctrl.signal, cache: "no-store" })
         .then(r => r.ok ? r.json() : Promise.reject())
-        .then(j => { if (!j || !j.ok) throw 0; window.open(ORGANIZER, "_blank", "noopener"); })
-        .catch(() => showOrganizer("mac"))
+        .then(j => {
+          if (!j || !j.ok) throw 0;
+          const popup = window.open(ORGANIZER, "_blank", "noopener");
+          if (!popup) showOrganizer("mac", true);
+        })
+        .catch(() => showOrganizer("mac", false))
         .finally(() => clearTimeout(timer));
     }
     function orgRow() {

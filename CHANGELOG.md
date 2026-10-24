@@ -2,6 +2,11 @@
 
 Every commit gets a summary and timestamp here (Central Time). Newest first.
 
+## 2026-10-23
+
+- **9:10 PM CT — v47: organizer stays in the app when it isn't running, and sorts Vertical / Horizontal** (`testing`)
+  Tapping Organize SD card on the iPhone, or on the Mac when the helper isn't running, stays in Daxton's Life and explains how to start it (double-click Organize SD Card.command). It no longer opens http://127.0.0.1:8765, which was the browser error page. Photos and videos now go in Sony/YYYY-MM-DD/Photos/Vertical or Horizontal, and the same for Videos. Taller than wide, after the camera rotation, is Vertical. A square is Horizontal. Each copy is still checked by size and checksum, and delete is still a separate button. Not on `main` yet.
+
 ## 2026-10-20
 
 - **4:50 PM CT — v46: Organize SD card** (`testing`)

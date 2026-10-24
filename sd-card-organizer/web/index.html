@@ -42,13 +42,15 @@
   .good { color:var(--good); }
   .danger-zone { border-color:rgba(255,138,122,.45); }
   .empty { color:var(--dim); font-size:15px; line-height:1.4; }
+  .tree { font: 14px ui-monospace, SFMono-Regular, Menlo, monospace; line-height:1.45; color: var(--ink);
+          background: rgba(244,241,234,.05); border-radius: 14px; padding: 12px 14px; margin: 10px 0 0; white-space: pre-wrap; }
   #status { min-height:1.3em; margin:8px 0 0; }
 </style>
 </head>
 <body>
 <main>
   <h1>Organize SD card</h1>
-  <p class="lede">Copies every photo and video straight from the Sony card onto the hard drive. One folder per day: <b>YYYY-MM-DD/Photos</b> and <b>YYYY-MM-DD/Videos</b>. Sony XML and THM files stay next to their video. Nothing is saved on this Mac.</p>
+  <p class="lede">Copies every photo and video straight from the Sony card onto the hard drive. One folder per day, then Photos or Videos, then Vertical or Horizontal. A taller picture goes in Vertical. A square goes in Horizontal. Sony XML and THM files stay next to their video. Nothing is saved on this Mac.</p>
 
   <div class="grid">
     <section>
@@ -64,7 +66,8 @@
   <section>
     <label for="rootName">Folder name on the hard drive</label>
     <input id="rootName" value="Sony" autocomplete="off" maxlength="80">
-    <p class="muted">Files land in this folder, then a folder for the day they were taken.</p>
+    <p class="muted">Files land in this folder, then a folder for the day, then Photos or Videos, then Vertical or Horizontal.</p>
+    <pre class="tree" id="tree"></pre>
     <div class="row" style="margin-top:14px">
       <button class="quiet" id="refresh" type="button">Refresh drives</button>
       <button class="primary" id="scan" type="button">Look at the card</button>
@@ -80,7 +83,7 @@
 
   <section class="danger-zone">
     <h2>Delete from the SD card</h2>
-    <p class="muted">This never runs by itself. It only removes files that were copied and then checked, byte for byte, on the hard drive. Anything that was not checked stays on the card.</p>
+    <p class="muted">This never runs by itself. A file can be deleted only after the copy on the hard drive matches the card in both size and checksum. Anything that does not match stays on the card.</p>
     <button class="quiet" id="previewDelete" type="button">Show what would be deleted</button>
     <div id="deleteSummary"></div>
   </section>
@@ -110,6 +113,17 @@ async function api(path, body) {
 function picks() {
   return { source, dest, rootName: $("rootName").value.trim() || "Sony" };
 }
+function showTree() {
+  const name = $("rootName").value.trim() || "Sony";
+  $("tree").textContent = [
+    name + "/YYYY-MM-DD/Photos/Vertical",
+    name + "/YYYY-MM-DD/Photos/Horizontal",
+    name + "/YYYY-MM-DD/Videos/Vertical",
+    name + "/YYYY-MM-DD/Videos/Horizontal"
+  ].join("\n");
+}
+$("rootName").addEventListener("input", showTree);
+showTree();
 function renderVolumes(list) {
   const draw = (el, which) => {
     el.replaceChildren();
@@ -189,8 +203,14 @@ $("scan").onclick = async () => {
       const right = document.createElement("span");
       right.className = "muted";
       const bits = [];
-      if (day.photos) bits.push(word(day.photos, "photo", "photos"));
-      if (day.videos) bits.push(word(day.videos, "video", "videos"));
+      const shape = (vertical, horizontal) => {
+        const parts = [];
+        if (vertical) parts.push(vertical + " vertical");
+        if (horizontal) parts.push(horizontal + " horizontal");
+        return parts.length ? " (" + parts.join(", ") + ")" : "";
+      };
+      if (day.photos) bits.push(word(day.photos, "photo", "photos") + shape(day.photoVertical, day.photoHorizontal));
+      if (day.videos) bits.push(word(day.videos, "video", "videos") + shape(day.videoVertical, day.videoHorizontal));
       if (day.sidecars) bits.push(word(day.sidecars, "note", "notes"));
       right.textContent = bits.join(" · ");
       row.append(left, right);

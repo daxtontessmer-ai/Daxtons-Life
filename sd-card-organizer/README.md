@@ -2,22 +2,24 @@
 
 This copies photos and videos off the Sony a6400 SD card onto a hard drive, on the MacBook. The iPhone cannot see drives that are plugged into the Mac, so this runs on the Mac only.
 
-Each day the pictures were taken gets its own folder:
+Each day the pictures were taken gets its own folder, then Vertical or Horizontal:
 
 ```text
-Hard Drive / Sony / 2024-03-15 / Photos
-Hard Drive / Sony / 2024-03-15 / Videos
+Hard Drive / Sony / 2024-03-15 / Photos / Vertical
+Hard Drive / Sony / 2024-03-15 / Photos / Horizontal
+Hard Drive / Sony / 2024-03-15 / Videos / Vertical
+Hard Drive / Sony / 2024-03-15 / Videos / Horizontal
 ```
 
-`Sony` is the folder name you type. You can change it. Photos go in `Photos`. Videos go in `Videos`. The small Sony `.XML` and `.THM` files that belong to a video sit in that same `Videos` folder, next to the video.
+`Sony` is the folder name you type. You can change it. A picture that is taller than it is wide, after the camera's rotation, goes in `Vertical`. A landscape or a square goes in `Horizontal`. The small Sony `.XML` and `.THM` files that belong to a video sit in that video's folder, next to the video.
 
-The date comes from the camera (the photo's EXIF date, or the video's XML / video date). If a file has no camera date, the file's own date is used.
+The date comes from the camera (the photo's EXIF date, or the video's XML / video date). If a file has no camera date, the file's own date is used. Photo orientation comes from the EXIF orientation tag plus the pixel size. Video orientation comes from the width, height, and rotation stored in the video. If `ffprobe` is installed, it is used when that built-in reader cannot see a size.
 
-Files copy straight from the card to the hard drive. They are not saved on the Mac's internal disk first. After each copy, the file on the drive is read back and checked. If the check fails, that copy is removed and the original stays on the card.
+Files copy straight from the card to the hard drive. They are not saved on the Mac's internal disk first. After each copy, the file on the drive is read back and checked for the same size and the same checksum. If the check fails, that copy is removed and the original stays on the card.
 
 Putting in another card later merges into the same day folders. A file that is already on the drive (same bytes) is skipped. A different file that happens to have the same name is saved under a new name. Nothing already on the drive is overwritten.
 
-Deleting files from the SD card is a separate button. It shows a summary first, and it only deletes files that were checked on the drive. It never deletes by itself.
+Deleting files from the SD card is a separate button. It shows a summary first. It only deletes a file when the copy on the drive still matches the card in size and checksum. It never deletes by itself.
 
 ## Start it
 
@@ -47,6 +49,6 @@ To clear the card afterward:
 
 Unplug the card from the Finder eject button when you are finished, the same as usual.
 
-## If you opened it from Daxton's Life on the iPhone
+## If you opened it from Daxton's Life
 
-The Organize SD card button in the app only works on the MacBook, and only while this helper is running. On the iPhone it explains these same steps. The phone cannot copy to a drive that is plugged into the Mac.
+The Organize SD card button only opens this page when the helper is already running on that Mac. On the iPhone, or when the helper is not running, the app stays on Daxton's Life and shows these steps. It does not send you to an error page. The phone cannot copy to a drive that is plugged into the Mac.
