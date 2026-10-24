@@ -532,7 +532,7 @@
             if (node.setPointerCapture) node.setPointerCapture(pointerId);
             if (navigator.vibrate) navigator.vibrate(15);
             relationStatus.textContent = "Drop on Family, Friends, Girls, Acquaintances, or another person.";
-          }, 380);
+          }, node.classList.contains("relationship-grip") ? 0 : 380);
         });
         node.addEventListener("pointermove", e => {
           if (relationshipTimer && Math.hypot(e.clientX-x0,e.clientY-y0)>10) { clearTimeout(relationshipTimer); relationshipTimer = null; }
