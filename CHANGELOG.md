@@ -2,6 +2,11 @@
 
 Every commit gets a summary and timestamp here (Central Time). Newest first.
 
+## 2026-10-25
+
+- **10:20 PM CT — v49: Video Converter** (`testing`)
+  New Video Converter pill in Links, next to Daxton's Portfolio. Pick a video, including an iPhone .mov, and convert it on the device into MP4, MOV, WebM, MKV, AVI, GIF, MP3, or ZIP. MP4 is marked "Best for Blackboard / uploads" and is H.264 with AAC. Mute and trim of the start and end are optional. A bar shows progress, then a download button. Nothing is uploaded. The first run downloads the converter (about 31 MB); after that it still works with no signal. iPhone clips over 200 MB are turned away so Safari doesn't close the page. The service worker is v49. The photo editor and the adventure map are still their own pages. It uses the single-thread converter, so GitHub Pages does not need special headers.
+
 ## 2026-10-23
 
 - **11:50 PM CT — SD organizer: small days share Other Days, and Tetons gets a folder** (`testing`)
