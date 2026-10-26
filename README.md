@@ -14,6 +14,7 @@ A personal web app for iPhone. Open it in Safari, tap Share → **Add to Home Sc
 
 - `index.html` — the app
 - `video.html` — convert a video in the browser (opened from Links)
+- `editor.html` — cut a reel in the browser (opened from Links)
 - `img/daxton.jpg` — the landing-page photo
 - `img/icon-*.png` — home-screen icons
 - `manifest.webmanifest`, `sw.js` — make it installable and work with no signal

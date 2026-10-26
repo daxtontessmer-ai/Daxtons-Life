@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-25
 
+- **11:26 PM CT — v55: Video Editor** 
+  New Video Editor pill in Links. Drop in camera clips, reorder them on a timeline, trim with I and O, step frames with the arrow keys, and split. Relay cut marks the same trick on each angle and builds a sequence that hands off through the motion. Picture can be 9:16 (drag to reframe), 1:1, or 16:9. Optional music has a volume slider, clip audio can be muted, and each clip can run in slow motion. Preview plays right away. Export writes an H.264 MP4 at 1080p and shows progress. Big 4K files warn about memory and can be downscaled on import. It uses the same single-thread converter as Video Converter, so GitHub Pages needs no special headers and the app's offline worker stays in charge. The service worker is v55.
+
 - **10:20 PM CT — v54: Video Converter** (`main`)
   New Video Converter pill in Links. Pick a video, including an iPhone .mov, and convert it on the device into MP4, MOV, WebM, MKV, AVI, GIF, MP3, or ZIP. MP4 is marked "Best for Blackboard / uploads" and is H.264 with AAC. Mute and trim of the start and end are optional. A bar shows progress, then a download button. Nothing is uploaded. The first run downloads the converter (about 31 MB); after that it still works with no signal. iPhone clips over 200 MB are turned away so Safari doesn't close the page. The service worker is v54 so an installed copy picks this up. It uses the single-thread converter, so GitHub Pages does not need special headers, and the app's existing offline worker stays in charge.
 
