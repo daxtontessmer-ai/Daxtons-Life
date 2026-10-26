@@ -1144,6 +1144,12 @@
       btn.onclick = () => { const opening = panel.hidden; all.forEach(o => o.close()); if (opening) { panel.hidden = false; btn.setAttribute("aria-expanded", "true"); } };
       all.push(sec);
     })();
+    // ---------- Video Converter: in-browser conversion, opened as its own page ----------
+    const videoLink = el("a", "pill");
+    videoLink.href = "video.html";
+    videoLink.append(document.createTextNode("Video Converter "));
+    videoLink.insertAdjacentHTML("beforeend", CHEV);
+    linkPills.append(videoLink);
     // ---------- Compare versions: Main, Testing and Beta side by side (tabs on a phone) ----------
     (() => {
       const V = [
