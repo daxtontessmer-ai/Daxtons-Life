@@ -1150,6 +1150,12 @@
     videoLink.append(document.createTextNode("Video Converter "));
     videoLink.insertAdjacentHTML("beforeend", CHEV);
     linkPills.append(videoLink);
+    // ---------- Video Editor: cut a reel in the browser, opened as its own page ----------
+    const editorLink = el("a", "pill");
+    editorLink.href = "editor.html";
+    editorLink.append(document.createTextNode("Video Editor "));
+    editorLink.insertAdjacentHTML("beforeend", CHEV);
+    linkPills.append(editorLink);
     // ---------- Compare versions: Main, Testing and Beta side by side (tabs on a phone) ----------
     (() => {
       const V = [
