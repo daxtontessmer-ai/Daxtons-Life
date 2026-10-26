@@ -80,6 +80,9 @@
     .empty { font-size:13px; color:var(--dim); padding:10px 4px 2px; }
     .rel { max-height:calc(100dvh - 44px - env(safe-area-inset-top)); overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:220px; }
     .pills { display:flex; flex-wrap:wrap; gap:8px; }
+    a.pill { text-decoration:none; }
+    .links-sec { margin-top:14px; padding-top:12px; border-top:1px solid rgba(244,241,234,.22); }
+    .sec-label { font-size:11px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--dim); margin:0 0 8px 2px; }
     .pill-plus { padding:9px 15px; font-size:17px; line-height:1; }
     .pill-tools { display:flex; justify-content:flex-end; margin:4px 2px 8px; }
     .pill-edit { min-height:44px; font-size:15px; padding:8px 2px; }
@@ -109,6 +112,12 @@
   </style>
   <section class="rel">
     <div class="pills" id="pills"></div>
+    <div class="links-sec">
+      <div class="sec-label">Links</div>
+      <div class="pills">
+        <a class="pill" href="video.html">Video Converter <svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></a>
+      </div>
+    </div>
     <div id="panels"></div>
   </section>
   <div class="sheet" id="pillSheet" hidden>
