@@ -1,6 +1,6 @@
 // Keeps the app working with no signal. Bump VERSION whenever files change.
-const VERSION = "v8";
-const FILES = ["./", "index.html", "manifest.webmanifest", "img/daxton.jpg", "img/icon-180.png", "img/icon-192.png", "img/icon-512.png"];
+const VERSION = "v9-video-converter";
+const FILES = ["./", "index.html", "video.html", "manifest.webmanifest", "img/daxton.jpg", "img/icon-180.png", "img/icon-192.png", "img/icon-512.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
@@ -16,7 +16,8 @@ async function refreshClients() {
 
 self.addEventListener("activate", e => {
   // Finish activating before reloading. Navigating inside this waitUntil deadlocks the page load.
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k))))
+  // dl-ffmpeg* is the converter engine, saved by the video page. Keep it across app updates.
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION && !k.startsWith("dl-ffmpeg")).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
   setTimeout(() => { refreshClients(); }, 50);
 });
@@ -27,6 +28,24 @@ self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.endsWith("/sw.js")) return; // let the browser fetch this file itself so an update is never a stale copy
+  // video.html must not be saved over the home page. Cache it on its own.
+  if (e.request.mode === "navigate" && /\/video\.html$/.test(url.pathname)) {
+    e.respondWith((async () => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 8000);
+      try {
+        const fresh = await fetch("video.html", { cache: "no-store", credentials: "same-origin", signal: ctrl.signal });
+        if (fresh && fresh.ok) {
+          const copy = fresh.clone();
+          caches.open(VERSION).then(c => c.put("video.html", copy)).catch(() => {});
+          return fresh;
+        }
+      } catch (err) {}
+      finally { clearTimeout(timer); }
+      return (await caches.match("video.html")) || Response.error();
+    })());
+    return;
+  }
   const isPage = e.request.mode === "navigate";
   if (isPage) {
     e.respondWith((async () => {
