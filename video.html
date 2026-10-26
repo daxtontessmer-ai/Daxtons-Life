@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Daxton's Life">
+<meta name="theme-color" content="#0b0b0b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="icon" href="img/icon-192.png">
+<title>Video Converter · Daxton's Life</title>
+<style>
+  :root { --ink:#f4f1ea; --dim:rgba(244,241,234,.62); --bg:#0b0b0b; }
+  * { box-sizing:border-box; margin:0; }
+  html, body { background:var(--bg); color:var(--ink); }
+  body { font-family:-apple-system, system-ui, "Helvetica Neue", sans-serif; -webkit-font-smoothing:antialiased; min-height:100%; }
+  header { position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:8px;
+           padding:calc(8px + env(safe-area-inset-top)) 12px 8px; background:rgba(11,11,11,.94);
+           border-bottom:1px solid rgba(244,241,234,.12); }
+  .back { font:inherit; font-size:15px; font-weight:600; color:var(--ink); text-decoration:none; padding:8px 6px; }
+  .title { flex:1; text-align:center; font-size:12px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--dim); }
+  .sp { width:64px; }
+  main { max-width:640px; margin:0 auto; padding:18px 16px calc(28px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:14px; }
+  .lead, .hint, .limits, .meta { font-size:14px; line-height:1.45; color:var(--dim); }
+  .limits { font-size:12px; }
+  .file { display:flex; align-items:center; justify-content:center; min-height:52px; border-radius:999px;
+          border:1px solid rgba(244,241,234,.28); background:rgba(244,241,234,.08); font-weight:700; cursor:pointer; }
+  .file input { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+  .file:focus-within { border-color:var(--ink); }
+  video { width:100%; max-height:220px; background:#000; border-radius:16px; }
+  fieldset { border:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+  legend { font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--dim); margin-bottom:2px; }
+  .choice { display:flex; gap:10px; align-items:flex-start; padding:10px 14px; border-radius:16px;
+            border:1px solid rgba(244,241,234,.16); background:rgba(244,241,234,.05); cursor:pointer; }
+  .choice:has(input:checked) { border-color:var(--ink); background:rgba(244,241,234,.12); }
+  .choice input { margin-top:3px; accent-color:#f4f1ea; }
+  .choice .txt { flex:1; min-width:0; color:var(--ink); }
+  .choice b { display:block; font-size:15px; }
+  .choice .txt span { display:block; font-size:12px; color:var(--dim); line-height:1.35; margin-top:1px; }
+  .choice.best .txt span { color:#f4f1ea; font-weight:650; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  label.num { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:600; color:var(--dim); }
+  label.num input { font:inherit; font-size:16px; font-weight:500; color:var(--ink); background:rgba(244,241,234,.08);
+                    border:1px solid rgba(244,241,234,.16); border-radius:999px; padding:10px 14px; width:100%; color-scheme:dark; }
+  .check { display:flex; align-items:center; gap:8px; font-size:15px; font-weight:600; }
+  .check input { width:18px; height:18px; accent-color:#f4f1ea; }
+  .actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  button { font:inherit; cursor:pointer; }
+  .go { border:0; border-radius:999px; padding:12px 18px; background:var(--ink); color:#0b0b0b; font-weight:750; font-size:15px; }
+  .go:disabled { opacity:.35; cursor:default; }
+  .cancel { border:0; background:none; color:var(--dim); font-size:14px; text-decoration:underline; }
+  .track { height:8px; border-radius:99px; background:rgba(244,241,234,.14); overflow:hidden; }
+  .track > span { display:block; height:100%; width:0; background:#9fc7ff; border-radius:inherit; }
+  #status { min-height:1.3em; font-size:14px; line-height:1.4; }
+  #status.error { color:#ff8a7a; }
+  .download { display:inline-flex; align-items:center; justify-content:center; text-decoration:none; font-weight:750;
+              background:var(--ink); color:#0b0b0b; border-radius:999px; padding:12px 18px; }
+  details { font-size:12px; color:var(--dim); }
+  pre { white-space:pre-wrap; overflow-wrap:anywhere; margin-top:8px; max-height:180px; overflow:auto; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="./">‹ Back</a>
+  <h1 class="title">Video Converter</h1>
+  <span class="sp"></span>
+</header>
+<main>
+  <p class="lead">Pick a video, often an iPhone or Mac .mov, and convert it here. It stays on this device. Nothing is uploaded.</p>
+  <label class="file" id="fileLabel">Choose a video
+    <input id="file" type="file" accept="video/*,.mov,.mp4,.m4v,.webm,.mkv,.avi">
+  </label>
+  <p class="meta" id="meta"></p>
+  <video id="preview" controls playsinline preload="metadata" hidden></video>
+  <fieldset>
+    <legend>Format</legend>
+    <label class="choice best"><input type="radio" name="format" value="mp4" checked><span class="txt"><b>MP4</b><span>Best for Blackboard / uploads</span></span></label>
+    <label class="choice"><input type="radio" name="format" value="mov"><span class="txt"><b>MOV</b><span>QuickTime, for Apple devices</span></span></label>
+    <label class="choice"><input type="radio" name="format" value="webm"><span class="txt"><b>WebM</b><span>For websites and Chrome</span></span></label>
+    <label class="choice"><input type="radio" name="format" value="mkv"><span class="txt"><b>MKV</b><span>Matroska, a common download format</span></span></label>
+    <label class="choice"><input type="radio" name="format" value="avi"><span class="txt"><b>AVI</b><span>Older players and Windows</span></span></label>
+    <label class="choice"><input type="radio" name="format" value="gif"><span class="txt"><b>GIF</b><span>Short silent animation, scaled down</span></span></label>
+    <label class="choice"><input type="radio" name="format" value="mp3"><span class="txt"><b>MP3</b><span>Audio only</span></span></label>
+    <label class="choice"><input type="radio" name="format" value="zip"><span class="txt"><b>ZIP</b><span>The converted file, or the original, zipped for upload</span></span></label>
+  </fieldset>
+  <fieldset id="zipBox" hidden>
+    <legend>What goes in the ZIP</legend>
+    <label class="choice"><input type="radio" name="zipmode" value="mp4" checked><span class="txt"><b>Blackboard MP4, then zip it</b><span>Converts first, then zips that file</span></span></label>
+    <label class="choice"><input type="radio" name="zipmode" value="original"><span class="txt"><b>The original file</b><span>No conversion. Wraps the file you picked</span></span></label>
+  </fieldset>
+  <label class="check"><input id="mute" type="checkbox"> Mute</label>
+  <div class="row2">
+    <label class="num">Start at (seconds)<input id="start" type="number" min="0" step="0.1" value="0" inputmode="decimal"></label>
+    <label class="num">End at (seconds)<input id="end" type="number" min="0" step="0.1" placeholder="end" inputmode="decimal"></label>
+  </div>
+  <p class="hint" id="hint">Leave End blank to keep the rest of the video. A GIF keeps at most the first 10 seconds.</p>
+  <div class="actions">
+    <button class="go" id="go" type="button" disabled>Convert</button>
+    <button class="cancel" id="cancel" type="button" hidden>Cancel</button>
+  </div>
+  <div class="track" id="track" hidden role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progress"><span id="bar"></span></div>
+  <p id="status" role="status"></p>
+  <a class="download" id="download" hidden>Download</a>
+  <p class="hint" id="saveHint" hidden>On iPhone, if the file opens instead of saving, tap the share button and choose Save to Files.</p>
+  <details id="details" hidden><summary>Technical details</summary><pre id="log"></pre></details>
+  <p class="limits">The first conversion downloads the converter (about 31 MB). After that it can run with no signal. Converting uses one processor core, so a full HD clip can take a few minutes. Leave this page open. iPhone: videos over 200 MB are turned away, because Safari closes the page when it runs out of memory. Computers can take videos up to about 1 GB. This works in Safari on iPhone (iOS 16.4 or newer) and in Chrome or Safari on a computer.</p>
+</main>
+<script>
+(() => {
+  // Single-threaded ffmpeg.wasm. GitHub Pages cannot send the COOP/COEP headers the
+  // multi-thread build needs, and a second service worker would fight the app's own.
+  const FFMPEG_VER = "0.12.15";
+  const CORE_VER = "0.12.10";
+  const CACHE = "dl-ffmpeg-" + CORE_VER;
+  const SOURCES = [
+    { ffmpeg: "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@" + FFMPEG_VER + "/dist/esm", core: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@" + CORE_VER + "/dist/esm" },
+    { ffmpeg: "https://unpkg.com/@ffmpeg/ffmpeg@" + FFMPEG_VER + "/dist/esm", core: "https://unpkg.com/@ffmpeg/core@" + CORE_VER + "/dist/esm" }
+  ];
+  const ZIP_URLS = [
+    "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js",
+    "https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"
+  ];
+  const MB = 1024 * 1024;
+  const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const MAX = ios ? 200 * MB : 1024 * MB;
+  const WARN = ios ? 80 * MB : 500 * MB;
+  const $ = id => document.getElementById(id);
+  const formats = {
+    mp4: { ext:"mp4", mime:"video/mp4", label:"MP4" },
+    mov: { ext:"mov", mime:"video/quicktime", label:"MOV" },
+    webm: { ext:"webm", mime:"video/webm", label:"WebM" },
+    mkv: { ext:"mkv", mime:"video/x-matroska", label:"MKV" },
+    avi: { ext:"avi", mime:"video/x-msvideo", label:"AVI" },
+    gif: { ext:"gif", mime:"image/gif", label:"GIF" },
+    mp3: { ext:"mp3", mime:"audio/mpeg", label:"MP3" },
+    zip: { ext:"zip", mime:"application/zip", label:"ZIP" }
+  };
+
+  let picked = null, previewUrl = "", downloadUrl = "", ffmpeg = null, coreBlobs = null, busy = false, cancelFlag = false;
+
+  const pretty = n => n < 1024 ? n + " B" : n < MB ? (n / 1024).toFixed(n < 10 * 1024 ? 1 : 0) + " KB" : n < 1024 * MB ? (n / MB).toFixed(n < 10 * MB ? 1 : 0) + " MB" : (n / (1024 * MB)).toFixed(2) + " GB";
+  const format = () => document.querySelector('input[name="format"]:checked').value;
+  const zipMode = () => document.querySelector('input[name="zipmode"]:checked').value;
+  const baseName = name => ((name || "video").replace(/\.[^.]+$/, "").replace(/[^\w.\- ()]+/g, "").trim()) || "video";
+  const inputExt = file => {
+    const m = (file.name || "").toLowerCase().match(/\.([a-z0-9]+)$/);
+    const ext = m ? m[1] : "";
+    if (["mov","mp4","m4v","webm","mkv","avi","mpg","mpeg","3gp"].includes(ext)) return ext === "m4v" ? "mp4" : ext;
+    if ((file.type || "").includes("webm")) return "webm";
+    if ((file.type || "").includes("mp4")) return "mp4";
+    return "mov";
+  };
+  function setProgress(p, text) {
+    const n = Math.max(0, Math.min(1, p || 0));
+    $("track").hidden = false;
+    $("bar").style.width = Math.round(n * 100) + "%";
+    $("track").setAttribute("aria-valuenow", String(Math.round(n * 100)));
+    if (text) setStatus(text, false);
+  }
+  function setStatus(text, isError) {
+    const s = $("status");
+    s.textContent = text || "";
+    s.classList.toggle("error", !!isError);
+  }
+  function showLog(lines) {
+    $("log").textContent = (lines || []).slice(-40).join("\n");
+    $("details").hidden = !(lines && lines.length);
+  }
+  function tooBigMessage(size) {
+    if (ios) return "This video is " + pretty(size) + ". On an iPhone, Safari runs out of memory and closes the page on videos over 200 MB. Use a shorter clip, or convert it on a computer.";
+    return "This video is " + pretty(size) + ". The browser can't hold a video over about 1 GB. Try a shorter clip.";
+  }
+  function refreshOptions() {
+    const fmt = format();
+    const originalZip = fmt === "zip" && zipMode() === "original";
+    $("zipBox").hidden = fmt !== "zip";
+    const mute = $("mute"), start = $("start"), end = $("end");
+    mute.disabled = fmt === "mp3" || fmt === "gif" || originalZip;
+    start.disabled = end.disabled = originalZip;
+    $("hint").textContent = originalZip
+      ? "Mute and trim are used when converting. Zipping the original keeps the whole file as it is."
+      : fmt === "mp3"
+        ? "MP3 keeps the sound and drops the picture. Leave End blank to keep the whole clip."
+        : fmt === "gif"
+          ? "A GIF is silent, scaled down, and keeps at most the first 10 seconds."
+          : "Leave End blank to keep the rest of the video. Mute drops the sound.";
+    const label = fmt === "zip" ? (zipMode() === "original" ? "Zip original" : "Convert and zip") : "Convert to " + formats[fmt].label;
+    if (!busy) $("go").textContent = label;
+  }
+  document.querySelectorAll('input[name="format"], input[name="zipmode"]').forEach(el => el.addEventListener("change", refreshOptions));
+  refreshOptions();
+
+  $("file").addEventListener("change", () => {
+    const file = $("file").files && $("file").files[0];
+    picked = file || null;
+    if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = ""; }
+    $("preview").hidden = true;
+    $("preview").removeAttribute("src");
+    $("download").hidden = true;
+    $("saveHint").hidden = true;
+    showLog([]);
+    if (!file) { $("meta").textContent = ""; $("go").disabled = true; setStatus(""); return; }
+    const over = file.size > MAX;
+    let note = file.name + " · " + pretty(file.size);
+    if (over) note += ios ? " · Too big for iPhone Safari." : " · Too big for the browser.";
+    else if (file.size > WARN) note += ios ? " · Large for an iPhone. If the page closes, try a shorter video or a computer." : " · Large file. This can take a while.";
+    $("meta").textContent = note;
+    $("go").disabled = over;
+    setStatus(over ? tooBigMessage(file.size) : "", over);
+    if (!over) {
+      previewUrl = URL.createObjectURL(file);
+      const v = $("preview");
+      v.src = previewUrl;
+      v.hidden = false;
+      v.onloadedmetadata = () => {
+        if (!Number.isFinite(v.duration)) return;
+        $("meta").textContent = note + " · " + (Math.round(v.duration * 10) / 10) + " seconds";
+      };
+      v.onerror = () => { $("meta").textContent = note + " · This browser can't preview it. Conversion can still work."; };
+    }
+  });
+
+  function readTrim() {
+    const read = (id, blank) => {
+      const raw = $(id).value.trim();
+      if (raw === "") return blank;
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n < 0) return NaN;
+      return Math.round(n * 1000) / 1000;
+    };
+    const start = read("start", 0);
+    const end = read("end", null);
+    if (Number.isNaN(start) || Number.isNaN(end)) return { error: "Use seconds for the trim, like 0 or 1.5." };
+    if (end != null && end <= start) return { error: "End time needs to be after the start time." };
+    return { start, end };
+  }
+
+  async function fetchBytes(url, onProgress) {
+    let cache = null;
+    try { cache = await caches.open(CACHE); } catch (e) {}
+    if (cache) {
+      try {
+        const hit = await cache.match(url);
+        if (hit) {
+          const bytes = new Uint8Array(await hit.arrayBuffer());
+          if (bytes.byteLength > 32 && !(url.endsWith(".wasm") && bytes.byteLength < MB)) {
+            if (onProgress) onProgress(1);
+            return { bytes, cached: true };
+          }
+        }
+      } catch (e) {}
+    }
+    const res = await fetch(url);
+    if (!res.ok || !res.body) throw new Error("Could not download the converter (" + res.status + ").");
+    const total = Number(res.headers.get("content-length")) || 0;
+    const reader = res.body.getReader();
+    const chunks = [];
+    let got = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      got += value.byteLength;
+      if (onProgress && total) onProgress(Math.min(1, got / total));
+    }
+    const bytes = new Uint8Array(got);
+    let off = 0;
+    for (const c of chunks) { bytes.set(c, off); off += c.byteLength; }
+    if (cache) { try { await cache.put(url, new Response(bytes.slice().buffer, { headers: { "Content-Type": "application/octet-stream" } })); } catch (e) {} }
+    return { bytes, cached: false };
+  }
+  const asText = b => new TextDecoder().decode(b);
+  const blobUrl = (bytes, type) => URL.createObjectURL(new Blob([bytes], { type }));
+
+  async function importLibrary(base) {
+    const names = ["const.js", "errors.js", "utils.js", "types.js", "classes.js", "index.js"];
+    const text = {};
+    for (const name of names) text[name] = asText((await fetchBytes(base + "/" + name)).bytes);
+    const urls = {};
+    const rewrite = code => code.replace(/from\s+["']\.\/([^"']+)["']/g, (_, name) => 'from "' + urls[name] + '"');
+    for (const name of names) {
+      urls[name] = blobUrl(new TextEncoder().encode(rewrite(text[name])), "text/javascript");
+    }
+    const mod = await import(urls["index.js"]);
+    return mod.FFmpeg;
+  }
+  async function makeWorker(base) {
+    const worker = asText((await fetchBytes(base + "/worker.js")).bytes);
+    const consts = asText((await fetchBytes(base + "/const.js")).bytes).replace(/^export /gm, "");
+    const errors = asText((await fetchBytes(base + "/errors.js")).bytes).replace(/^export /gm, "");
+    const body = worker.replace(/^\s*import\s+[\s\S]*?from\s+["'][^"']+["'];?\s*$/gm, "");
+    return blobUrl(new TextEncoder().encode(consts + "\n" + errors + "\n" + body), "text/javascript");
+  }
+  async function ensureFfmpeg(onProgress) {
+    if (ffmpeg && ffmpeg.loaded) return ffmpeg;
+    let last;
+    for (const src of SOURCES) {
+      try {
+        onProgress("Downloading the converter…", 0.02);
+        const FFmpeg = await importLibrary(src.ffmpeg);
+        const wasm = await fetchBytes(src.core + "/ffmpeg-core.wasm", p => onProgress(wasmText(p), 0.08 + p * 0.84));
+        const core = await fetchBytes(src.core + "/ffmpeg-core.js", p => onProgress("Downloading the converter…", 0.93 + p * 0.05));
+        const classWorkerURL = await makeWorker(src.ffmpeg);
+        const coreURL = blobUrl(core.bytes, "text/javascript");
+        const wasmURL = blobUrl(wasm.bytes, "application/wasm");
+        coreBlobs = [classWorkerURL, coreURL, wasmURL];
+        ffmpeg = new FFmpeg();
+        onProgress(wasm.cached ? "Converter is already on this device. Starting…" : "Starting the converter…", 1);
+        await ffmpeg.load({ classWorkerURL, coreURL, wasmURL });
+        return ffmpeg;
+      } catch (e) { last = e; ffmpeg = null; }
+    }
+    const msg = String(last && (last.message || last) || "");
+    if (/compile|WebAssembly|SIMD|out of memory/i.test(msg)) {
+      throw new Error(ios
+        ? "This iPhone couldn't start the converter. It needs Safari on iOS 16.4 or newer."
+        : "This browser couldn't start the converter. Use Chrome, or Safari 16.4 or newer.");
+    }
+    if (!navigator.onLine) throw new Error("Connect to the internet once so this page can download the converter (about 31 MB). After that it works with no signal.");
+    throw new Error("Couldn't download the converter. Check your connection and try again.");
+  }
+  const wasmText = p => p >= 1 ? "Downloading the converter…" : "Downloading the converter… " + Math.round(p * 100) + "%";
+
+  function buildArgs(fmt, inName, outName, start, end, mute) {
+    const args = [];
+    if (start > 0) args.push("-ss", String(start));
+    if (end != null) args.push("-to", String(end));
+    args.push("-i", inName);
+    if (fmt === "gif") {
+      args.push("-t", "10", "-vf", "fps=8,scale=360:-2:flags=lanczos", "-an");
+    } else if (fmt === "mp3") {
+      args.push("-vn", "-c:a", "libmp3lame", "-q:a", "2");
+    } else if (fmt === "webm") {
+      args.push("-c:v", "libvpx", "-pix_fmt", "yuv420p", "-deadline", "realtime", "-cpu-used", "8", "-b:v", "1M");
+      args.push(...(mute ? ["-an"] : ["-c:a", "libopus", "-b:a", "96k"]));
+    } else if (fmt === "avi") {
+      args.push("-c:v", "mpeg4", "-pix_fmt", "yuv420p", "-q:v", "5");
+      args.push(...(mute ? ["-an"] : ["-c:a", "libmp3lame", "-q:a", "4"]));
+    } else {
+      args.push("-c:v", "libx264", "-preset", "ultrafast", "-crf", "23", "-pix_fmt", "yuv420p", "-profile:v", "high");
+      if (fmt === "mp4" || fmt === "mov") args.push("-movflags", "+faststart");
+      if (fmt === "mkv") args.push("-f", "matroska");
+      args.push(...(mute ? ["-an"] : ["-c:a", "aac", "-b:a", "160k", "-ac", "2"]));
+    }
+    args.push(outName);
+    return args;
+  }
+  function friendly(logs, err) {
+    const text = (logs || []).join("\n") + "\n" + String(err && (err.message || err) || "");
+    if (/out of memory|memory access out of bounds|Aborted\(|OOM/i.test(text)) return "The browser ran out of memory. This video is too big to convert here. Try a shorter clip, or use a computer.";
+    if (/matches no streams|does not contain any stream|Output file #0 does not contain any stream|audio: 0 channels/i.test(text)) return "This video has no audio track, so an MP3 can't be made.";
+    if (/Invalid data found|moov atom not found|Error opening input|Invalid argument/i.test(text)) return "This file could not be read as a video. Try exporting it again from Photos, or pick a different file.";
+    if (/Unknown encoder|Encoder \(.*\) not found|Unknown decoder|Decoder \(.*\) not found/i.test(text)) return "The converter can't make that format from this video.";
+    const line = [...(logs || [])].reverse().find(l => /error|invalid|failed/i.test(l));
+    return "Conversion failed. Try a shorter clip or a different format." + (line ? " " + line.replace(/^\[[^\]]+\]\s*/, "") : "");
+  }
+  async function loadZip() {
+    if (window.JSZip) return window.JSZip;
+    let last;
+    for (const url of ZIP_URLS) {
+      try {
+        const bytes = (await fetchBytes(url)).bytes;
+        await new Promise((resolve, reject) => {
+          const s = document.createElement("script");
+          s.src = blobUrl(bytes, "text/javascript");
+          s.onload = resolve;
+          s.onerror = () => reject(new Error("zip script"));
+          document.head.append(s);
+        });
+        if (window.JSZip) return window.JSZip;
+      } catch (e) { last = e; }
+    }
+    throw last || new Error("zip");
+  }
+  async function zipBlob(name, data, onProgress) {
+    const JSZip = await loadZip();
+    const zip = new JSZip();
+    zip.file(name, data, { compression: "STORE" });
+    return zip.generateAsync({ type: "blob", compression: "STORE" }, meta => onProgress(meta.percent / 100));
+  }
+  function offerDownload(blob, filename) {
+    if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+    downloadUrl = URL.createObjectURL(blob);
+    const a = $("download");
+    a.href = downloadUrl;
+    a.download = filename;
+    a.textContent = "Download " + filename + " (" + pretty(blob.size) + ")";
+    a.hidden = false;
+    $("saveHint").hidden = false;
+  }
+
+  $("cancel").onclick = () => {
+    cancelFlag = true;
+    setStatus("Canceling…");
+    try { if (ffmpeg) ffmpeg.terminate(); } catch (e) {}
+    ffmpeg = null;
+  };
+
+  $("go").onclick = async () => {
+    if (busy || !picked) return;
+    if (picked.size > MAX) { setStatus(tooBigMessage(picked.size), true); return; }
+    const fmt = format();
+    const originalZip = fmt === "zip" && zipMode() === "original";
+    const encodeFmt = fmt === "zip" ? "mp4" : fmt;
+    const trim = originalZip ? { start: 0, end: null } : readTrim();
+    if (trim.error) { setStatus(trim.error, true); return; }
+    if (fmt === "mp3" && $("mute").checked && !$("mute").disabled) { setStatus("Mute is on, so there's no audio to save. Turn mute off to make an MP3.", true); return; }
+    busy = true; cancelFlag = false;
+    $("go").disabled = true; $("cancel").hidden = false; $("download").hidden = true; $("saveHint").hidden = true; showLog([]);
+    const logs = [];
+    const stem = baseName(picked.name);
+    try {
+      if (originalZip) {
+        setProgress(0.05, "Zipping the original file…");
+        const blob = await zipBlob(picked.name || "video.mov", picked, p => setProgress(p, "Zipping… " + Math.round(p * 100) + "%"));
+        if (cancelFlag) { setStatus("Canceled."); return; }
+        offerDownload(blob, stem + ".zip");
+        setProgress(1, "Ready. The ZIP holds the original file.");
+        return;
+      }
+      const ff = await ensureFfmpeg((text, p) => setProgress(p, text));
+      if (cancelFlag) { setStatus("Canceled."); return; }
+      const onLog = ({ message }) => { if (message) { logs.push(message); if (logs.length > 200) logs.shift(); } };
+      ff.on("log", onLog);
+      let saw = false;
+      const started = Date.now();
+      const onProg = ({ progress }) => {
+        if (progress > 0 && progress <= 1) { saw = true; setProgress(progress, "Converting… " + Math.round(progress * 100) + "%"); }
+      };
+      ff.on("progress", onProg);
+      const ticker = setInterval(() => {
+        if (!saw && !cancelFlag) setStatus("Converting… " + Math.round((Date.now() - started) / 1000) + "s. A full HD clip can take a few minutes. Keep this page open.");
+      }, 2000);
+      const inName = "input." + inputExt(picked);
+      const produced = "output." + formats[encodeFmt].ext;
+      try {
+        setStatus("Reading the video…");
+        const bytes = new Uint8Array(await picked.arrayBuffer());
+        if (cancelFlag) { setStatus("Canceled."); return; }
+        await ff.writeFile(inName, bytes);
+        const mute = encodeFmt !== "mp3" && (encodeFmt === "gif" || $("mute").checked);
+        const code = await ff.exec(buildArgs(encodeFmt, inName, produced, trim.start, trim.end, mute));
+        if (code !== 0) throw new Error("ffmpeg " + code);
+        const data = await ff.readFile(produced);
+        const copy = data.slice ? data.slice() : new Uint8Array(data);
+        if (!copy.byteLength) throw new Error("empty output");
+        if (fmt === "zip") {
+          setProgress(0.98, "Zipping the MP4…");
+          const blob = await zipBlob(stem + ".mp4", copy, p => setProgress(0.98 + p * 0.02, "Zipping… " + Math.round(p * 100) + "%"));
+          offerDownload(blob, stem + ".zip");
+          setProgress(1, "Ready. The ZIP holds a Blackboard MP4.");
+        } else {
+          offerDownload(new Blob([copy], { type: formats[encodeFmt].mime }), stem + "." + formats[encodeFmt].ext);
+          const extra = encodeFmt === "gif" ? " GIF is scaled down and keeps at most 10 seconds." : encodeFmt === "mp4" ? " This MP4 is H.264 and AAC, for Blackboard and uploads." : "";
+          setProgress(1, "Ready." + extra);
+        }
+      } finally {
+        clearInterval(ticker);
+        ff.off("log", onLog);
+        ff.off("progress", onProg);
+        try { await ff.deleteFile(inName); } catch (e) {}
+        try { await ff.deleteFile(produced); } catch (e) {}
+      }
+    } catch (e) {
+      if (cancelFlag || /terminate/i.test(String(e && (e.message || e)))) { setStatus("Canceled."); return; }
+      showLog(logs);
+      const raw = String(e && (e.message || e) || "");
+      setStatus(/couldn't start|couldn't download|Connect to the internet|iOS 16\.4|Safari 16\.4/i.test(raw) ? raw : friendly(logs, e), true);
+      $("track").hidden = true;
+    } finally {
+      busy = false;
+      $("cancel").hidden = true;
+      $("go").disabled = !picked || picked.size > MAX;
+      refreshOptions();
+    }
+  };
+})();
+</script>
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+    navigator.serviceWorker.addEventListener("message", e => {
+      if (e.data !== "update-ready" || document.querySelector(".update")) return;
+      const b = document.createElement("button");
+      b.className = "go"; b.textContent = "New version ready · Tap to refresh";
+      b.style.position = "fixed"; b.style.left = "50%"; b.style.bottom = "calc(16px + env(safe-area-inset-bottom))"; b.style.transform = "translateX(-50%)";
+      b.onclick = () => location.reload();
+      document.body.append(b);
+    });
+  }
+</script>
+</body>
+</html>
