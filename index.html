@@ -1284,7 +1284,7 @@
     adventureBtn.onclick = () => { const opening = adventurePanel.hidden; all.forEach(o => o.close());
       if (opening) { adventurePanel.hidden = false; adventureBtn.setAttribute("aria-expanded", "true"); } };
     all.push({ panel: adventurePanel, render(){}, close(){ adventurePanel.hidden = true; adventureBtn.setAttribute("aria-expanded", "false"); } });
-    pillsBox.insertBefore(adventureBtn, plusBtn); panelsBox.append(adventurePanel);
+    pillsBox.append(adventureBtn); panelsBox.append(adventurePanel);
 
     function layout() {
       const secs = all.filter(o => o.key), byKey = Object.fromEntries(secs.map(o => [o.key, o]));
