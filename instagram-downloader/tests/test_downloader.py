@@ -196,6 +196,40 @@ class ServerTests(unittest.TestCase):
             names = archive.namelist()
         self.assertTrue(any(name.endswith(".mp4") for name in names))
 
+    def test_health_cors_is_limited_to_the_live_site(self):
+        def header(headers, name):
+            for key, value in headers.items():
+                if key.lower() == name.lower():
+                    return value
+            return None
+
+        live = "https://daxtontessmer-ai.github.io"
+        code, raw, headers = self._request("OPTIONS", "/api/health", origin=live)
+        self.assertEqual(code, 204)
+        self.assertEqual(header(headers, "Access-Control-Allow-Origin"), live)
+        self.assertEqual(header(headers, "Access-Control-Allow-Private-Network"), "true")
+        self.assertNotIn("*", header(headers, "Access-Control-Allow-Origin"))
+
+        code, raw, headers = self._request("GET", "/api/health", origin=live)
+        self.assertEqual(code, 200)
+        self.assertTrue(json.loads(raw)["ok"])
+        self.assertEqual(header(headers, "Access-Control-Allow-Origin"), live)
+        self.assertEqual(header(headers, "Access-Control-Allow-Private-Network"), "true")
+
+        local = f"http://127.0.0.1:{self.port}"
+        code, raw, headers = self._request("GET", "/api/health", origin=local)
+        self.assertEqual(code, 200)
+        self.assertEqual(header(headers, "Access-Control-Allow-Origin"), local)
+        self.assertIsNone(header(headers, "Access-Control-Allow-Private-Network"))
+
+        code, raw, headers = self._request("GET", "/api/health", origin="https://evil.example")
+        self.assertEqual(code, 200)
+        self.assertIsNone(header(headers, "Access-Control-Allow-Origin"))
+        self.assertIsNone(header(headers, "Access-Control-Allow-Private-Network"))
+        code, raw, headers = self._request("OPTIONS", "/api/health", origin="https://evil.example")
+        self.assertIsNone(header(headers, "Access-Control-Allow-Origin"))
+        self.assertIsNone(header(headers, "Access-Control-Allow-Private-Network"))
+
 
 if __name__ == "__main__":
     unittest.main()
