@@ -1,5 +1,5 @@
 // Keeps the app working with no signal. Bump VERSION whenever files change.
-const VERSION = "v9-video-converter";
+const VERSION = "v10-instagram-downloader";
 const FILES = ["./", "index.html", "video.html", "manifest.webmanifest", "img/daxton.jpg", "img/icon-180.png", "img/icon-192.png", "img/icon-512.png"];
 
 self.addEventListener("install", e => {
