@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Instagram</title>
+<style>
+  :root { --ink:#f4f1ea; --dim:rgba(244,241,234,.68); --bg:#0e0e0e; --line:rgba(244,241,234,.16); --card:#171717; --good:#b7e0b2; --warn:#ffb4a8; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
+  main { max-width:720px; margin:0 auto; padding:32px 20px 80px; }
+  h1 { font-size:40px; letter-spacing:-.04em; margin:0 0 8px; }
+  .lede { color:var(--dim); font-size:18px; line-height:1.45; margin:0 0 22px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:22px; padding:16px; margin-top:14px; }
+  label { display:block; font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); margin-bottom:8px; }
+  textarea { width:100%; min-height:96px; resize:vertical; font:inherit; font-size:17px; color:var(--ink); background:rgba(244,241,234,.06); border:1px solid var(--line); border-radius:14px; padding:12px 14px; }
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:14px; }
+  button, a.btn { font:inherit; border-radius:999px; padding:12px 18px; font-weight:700; cursor:pointer; text-decoration:none; display:inline-block; }
+  .primary { background:var(--ink); color:#111; border:0; }
+  .quiet { background:transparent; color:var(--ink); border:1px solid var(--line); }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  .bar { height:10px; border-radius:99px; background:rgba(244,241,234,.12); overflow:hidden; margin:12px 0; }
+  .bar i { display:block; height:100%; width:0; background:#d7c4a3; }
+  .bar.busy i { width:40%; animation:slide 1.1s ease-in-out infinite; }
+  @keyframes slide { 50% { margin-left:60%; } }
+  @media (prefers-reduced-motion:reduce) { .bar.busy i { animation:none; width:100%; opacity:.5; } }
+  #status { min-height:1.3em; margin:8px 0 0; }
+  .muted { color:var(--dim); }
+  .good { color:var(--good); }
+  .warn { color:var(--warn); }
+  ul { list-style:none; padding:0; margin:8px 0 0; }
+  li { padding:6px 0; border-top:1px solid var(--line); font-size:15px; }
+  code { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.92em; }
+  .drop { outline:2px dashed rgba(244,241,234,.45); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Instagram</h1>
+  <p class="lede">Paste a public Reel or post link. The video, and every photo or video in a carousel, is saved in a new folder under <b>Downloads / Instagram</b>. A zip of that folder is saved next to it.</p>
+  <section id="box">
+    <label for="url">Reel or post link</label>
+    <textarea id="url" placeholder="https://www.instagram.com/reel/…" autocomplete="off" spellcheck="false"></textarea>
+    <div class="row">
+      <button class="primary" id="go" type="button">Download</button>
+      <button class="quiet" id="cancel" type="button" hidden>Cancel</button>
+    </div>
+    <div class="bar" id="bar" hidden><i id="barFill"></i></div>
+    <p id="status" class="muted" aria-live="polite"></p>
+    <div id="result" hidden>
+      <p id="where"></p>
+      <ul id="files"></ul>
+      <p id="warnings" class="warn"></p>
+      <div class="row">
+        <a class="btn primary" id="zip" href="#">Download the zip</a>
+        <button class="quiet" id="reveal" type="button">Show in Finder</button>
+      </div>
+    </div>
+  </section>
+  <section>
+    <p class="muted">Public posts only. Nothing logs in to Instagram, and no password is saved. Stories, Highlights, and private accounts are skipped. Up to 8 links, separated by a space or a new line. Drop a link on this page, or press Return to download.</p>
+  </section>
+</main>
+<script>
+(() => {
+  const url = document.getElementById("url");
+  const go = document.getElementById("go");
+  const cancelBtn = document.getElementById("cancel");
+  const status = document.getElementById("status");
+  const bar = document.getElementById("bar");
+  const barFill = document.getElementById("barFill");
+  const result = document.getElementById("result");
+  const where = document.getElementById("where");
+  const files = document.getElementById("files");
+  const warnings = document.getElementById("warnings");
+  const zip = document.getElementById("zip");
+  const reveal = document.getElementById("reveal");
+  const box = document.getElementById("box");
+  let jobId = "";
+  let timer = 0;
+
+  function setStatus(text, kind) {
+    status.textContent = text || "";
+    status.className = kind || "muted";
+  }
+  function setBusy(on) {
+    go.disabled = on;
+    cancelBtn.hidden = !on;
+    bar.hidden = !on && !jobId;
+    if (on && !(barFill.style.width && barFill.style.width !== "0%")) bar.classList.add("busy");
+  }
+  async function post(path, body) {
+    const res = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {})
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "That didn't work.");
+    return data;
+  }
+  function show(job) {
+    const total = job.total || 0;
+    const done = job.downloaded || 0;
+    if (job.state === "running" && total > 0) {
+      bar.classList.remove("busy");
+      barFill.style.width = Math.max(4, Math.min(100, Math.round(done / total * 100))) + "%";
+    } else if (job.state === "running") {
+      bar.classList.add("busy");
+      barFill.style.width = "";
+    }
+    setStatus(job.message || "", job.state === "error" ? "warn" : job.state === "done" ? "good" : "muted");
+    if (job.state === "running") return;
+    clearInterval(timer);
+    timer = 0;
+    setBusy(false);
+    bar.hidden = job.state !== "done";
+    if (job.state === "done") {
+      bar.classList.remove("busy");
+      barFill.style.width = "100%";
+      result.hidden = false;
+      where.textContent = job.folder || "";
+      files.replaceChildren(...(job.files || []).map(name => {
+        const li = document.createElement("li");
+        li.textContent = name;
+        return li;
+      }));
+      warnings.textContent = (job.warnings || []).join(" ");
+      zip.href = "/api/jobs/" + job.id + "/zip";
+      zip.setAttribute("download", "");
+    }
+  }
+  async function poll() {
+    if (!jobId) return;
+    try {
+      const res = await fetch("/api/jobs/" + jobId, { cache: "no-store" });
+      const job = await res.json();
+      if (!res.ok) throw new Error(job.error || "Lost track of that download.");
+      show(job);
+    } catch (err) {
+      clearInterval(timer);
+      timer = 0;
+      setBusy(false);
+      setStatus(err.message, "warn");
+    }
+  }
+  async function start() {
+    if (go.disabled) return;
+    result.hidden = true;
+    warnings.textContent = "";
+    files.replaceChildren();
+    bar.hidden = false;
+    bar.classList.add("busy");
+    barFill.style.width = "";
+    setBusy(true);
+    setStatus("Starting…");
+    try {
+      const data = await post("/api/download", { url: url.value });
+      jobId = data.jobId;
+      timer = setInterval(poll, 500);
+      poll();
+    } catch (err) {
+      setBusy(false);
+      bar.hidden = true;
+      setStatus(err.message, "warn");
+    }
+  }
+  go.onclick = start;
+  url.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); start(); }
+  });
+  cancelBtn.onclick = () => { if (jobId) post("/api/jobs/" + jobId + "/cancel", {}).catch(() => {}); };
+  reveal.onclick = () => { if (jobId) post("/api/jobs/" + jobId + "/reveal", {}).catch(err => setStatus(err.message, "warn")); };
+  window.addEventListener("dragover", e => { e.preventDefault(); box.classList.add("drop"); });
+  window.addEventListener("dragleave", () => box.classList.remove("drop"));
+  window.addEventListener("drop", e => {
+    e.preventDefault();
+    box.classList.remove("drop");
+    const text = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain");
+    if (text) url.value = text.trim();
+  });
+  fetch("/api/health", { cache: "no-store" }).then(r => r.json()).then(info => {
+    if (info && info.ffmpeg === false) setStatus("ffmpeg was not found on the PATH. Videos that need it may not finish. It should live in ~/bin.", "warn");
+  }).catch(() => {});
+  url.focus();
+})();
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 // Keeps the app fast and working with no signal. Bump VERSION whenever files change.
-const VERSION = "v55-video-editor";
+const VERSION = "v56-instagram-downloader";
 const FILES = ["./", "index.html", "video.html", "editor.html", "manifest.webmanifest", "img/daxton.jpg", "img/icon-180.png"];
 
 self.addEventListener("install", e => {
