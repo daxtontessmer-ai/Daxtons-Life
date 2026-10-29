@@ -1416,6 +1416,67 @@
       wrap.append(btn, gear);
       return wrap;
     }
+    // Instagram runs on the MacBook. Never open localhost unless it just answered.
+    const IG = "http://127.0.0.1:8766/";
+    const igSheet = el("div", "sheet"); igSheet.hidden = true; igSheet.id = "igSheet";
+    const igCard = el("div", "sheet-card"); igCard.setAttribute("role", "dialog"); igCard.setAttribute("aria-labelledby", "igTitle");
+    const igTitle = el("h2", null, "This runs on your MacBook"); igTitle.id = "igTitle";
+    const igWhy = el("p"), igHow = el("p"), igWhere = el("p");
+    igHow.innerHTML = "<b>How to start it on the MacBook</b><br>1. In Finder, open <b>Applications</b>, then the folder <b>instagram-downloader</b>.<br>2. The first time, double-click <b>Install Instagram Downloader.command</b>.<br>3. Double-click <b>Download Instagram.command</b>.<br>The file is <b>~/Applications/instagram-downloader/Download Instagram.command</b>.<br>4. If the Mac says it can't be opened, Control-click it and choose Open.<br>Leave that window open. Then tap Instagram again.";
+    igWhere.innerHTML = "<b>Where the files go</b><br>Downloads / Instagram / YYYY-MM-DD_HHMMSS_shortcode<br>A zip of that folder is saved next to it. Public Reels and posts only. No Instagram login. This does not work on the iPhone.";
+    const igActions = el("div", "sheet-actions");
+    const igOpen = el("button", "add", "Open the downloader"); igOpen.type = "button"; igOpen.hidden = true; igOpen.style.padding = "12px 18px";
+    igOpen.onclick = () => { const popup = window.open(IG, "_blank", "noopener"); if (popup) igSheet.hidden = true; };
+    const igClose = el("button", "rm", "Close"); igClose.type = "button";
+    igClose.onclick = () => { igSheet.hidden = true; };
+    igActions.append(igOpen, igClose);
+    igCard.append(igTitle, igWhy, igHow, igWhere, igActions);
+    igSheet.append(igCard);
+    igSheet.addEventListener("click", e => { if (e.target === igSheet) igSheet.hidden = true; });
+    document.body.append(igSheet);
+    const igIos = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+      || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+      || (navigator.userAgentData && navigator.userAgentData.mobile);
+    function showInstagram(kind, running) {
+      igOpen.hidden = !running;
+      igWhy.textContent = kind === "iphone"
+        ? "You're on the iPhone. This only works on the MacBook. The phone can't save the video onto the Mac, so this stays here instead of opening an error page."
+        : (running
+          ? "The downloader is running on this Mac."
+          : "The downloader isn't running, so this stayed on Daxton's Life instead of opening an error page. Start it on the MacBook with the steps below, then tap Instagram again. It does not work on the iPhone.");
+      closePillEdit();
+      igSheet.hidden = false;
+    }
+    function instagramUrl(value) {
+      try {
+        const url = new URL(value, location.href);
+        return (url.hostname === "127.0.0.1" || url.hostname === "localhost") && url.port === "8766";
+      } catch (e) { return false; }
+    }
+    document.addEventListener("click", ev => {
+      const link = ev.target && ev.target.closest ? ev.target.closest("a[href]") : null;
+      if (!link || !instagramUrl(link.href)) return;
+      ev.preventDefault();
+      openInstagram();
+    }, true);
+    function openInstagram() {
+      if (igIos) { showInstagram("iphone", false); return; }
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 1500);
+      fetch(IG + "api/health", { signal: ctrl.signal, cache: "no-store" })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(j => {
+          if (!j || !j.ok || j.name !== "instagram-downloader") throw 0;
+          const popup = window.open(IG, "_blank", "noopener");
+          if (!popup) showInstagram("mac", true);
+        })
+        .catch(() => showInstagram("mac", false))
+        .finally(() => clearTimeout(timer));
+    }
+    const igBtn = el("button", "pill"); igBtn.type = "button";
+    igBtn.append(document.createTextNode("Instagram "));
+    igBtn.insertAdjacentHTML("beforeend", CHEV);
+    igBtn.onclick = () => openInstagram();
     function renderLinks() {
       document.querySelectorAll("#linkPills .pill-wrap, #projPills .pill-wrap, .sd-organizer").forEach(n => n.remove());
       const live = (data.sections.linkpills || []).filter(i => i && !i.deleted);
@@ -1432,6 +1493,7 @@
       if (shotBtn.firstChild && shotBtn.firstChild.nodeType === 3 && shotBtn.firstChild.textContent !== name + " ") shotBtn.firstChild.textContent = name + " ";
       shotList.replaceChildren();
       live.filter(i => i.group === "shot").sort((a, b) => (a.created || 0) - (b.created || 0)).forEach(item => shotList.append(linkRow(item, true)));
+      linkPills.insertBefore(igBtn, cmp || null);
       if (pillsBox.lastElementChild !== plusBtn) pillsBox.append(plusBtn);
     }
     function fillHidden() {

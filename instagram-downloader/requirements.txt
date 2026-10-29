@@ -1,0 +1,25 @@
+# Exact pins for Python 3.12.
+# Hashes cover the macOS Apple silicon wheels (Daxton's Mac) and the
+# Linux x86_64 wheels used to test this repo. No source builds.
+# Install with: python3 -m pip install --require-hashes --only-binary=:all: -r requirements.txt
+
+yt-dlp==2026.10.26 \
+    --hash=sha256:a05c5b5d8562f7e8a62f5334348b406af4930d56d3a65f8021d14af0e22339ae
+
+curl-cffi==0.17.0 \
+    --hash=sha256:88cb5e34eb23eb2106711b06df68027209c72be709df239c6029345551e0acfd \
+    --hash=sha256:af0782d5e340b65fd76701630f0284a8f8243d77df5f2637efd09a4b009f4e24
+
+cffi==2.1.1 \
+    --hash=sha256:f81b3b8f3d4e343550fa4baa0e479bba9f2d29ce9c2e9b51d1ce1718d7442fcf \
+    --hash=sha256:c1453022f490d2459a11819d83ad1d586e9ff65a12ac3e705ffebd46d3685dcf
+
+pycparser==3.11 \
+    --hash=sha256:51d5a8ba2be0bbe440b99d2112604c95bbbc3c2748a64260186c541e1729cd80
+
+certifi==2026.10.23 \
+    --hash=sha256:e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1
+
+brotli==1.2.1 \
+    --hash=sha256:a84e0ae14d1efe782a9f143021c4e01d5ed986a140fe5070505cc5978eaf0592 \
+    --hash=sha256:4b9dd0173ca5e01d1eb307d3c184fe8c09bdc168ede560889b1018d216d38c61

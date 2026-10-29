@@ -2,6 +2,11 @@
 
 Every commit gets a summary and timestamp here (Central Time). Newest first.
 
+## 2026-10-29
+
+- **3:15 PM CT — v50: Instagram downloader** (`testing`)
+  New Instagram pill in Links. It opens a small page on the MacBook, the same way SD Organizer does: the phone only shows how to start it. Paste a public Reel or post link and click Download. The video, and every photo or video in a carousel, is saved in a new folder under Downloads/Instagram, with a zip next to it. It runs from ~/Applications/instagram-downloader. No Instagram login. The service worker is v50.
+
 ## 2026-10-25
 
 - **10:20 PM CT — v49: Video Converter** (`testing`)
