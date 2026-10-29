@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Daxton's Life">
+<meta name="theme-color" content="#0b0b0b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="icon" href="img/icon-192.png">
+<title>Picture Converter · Daxton's Life</title>
+<style>
+  :root { --ink:#f4f1ea; --dim:rgba(244,241,234,.62); --bg:#0b0b0b; }
+  * { box-sizing:border-box; margin:0; }
+  html, body { background:var(--bg); color:var(--ink); }
+  body { font-family:-apple-system, system-ui, "Helvetica Neue", sans-serif; -webkit-font-smoothing:antialiased; min-height:100%; }
+  header { position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:8px;
+           padding:calc(8px + env(safe-area-inset-top)) 12px 8px; background:rgba(11,11,11,.94);
+           border-bottom:1px solid rgba(244,241,234,.12); }
+  .back { font:inherit; font-size:15px; font-weight:600; color:var(--ink); text-decoration:none; padding:8px 6px; }
+  .title { flex:1; text-align:center; font-size:12px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--dim); }
+  .sp { width:64px; }
+  main { max-width:640px; margin:0 auto; padding:18px 16px calc(28px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:14px; }
+  .lead, .hint, .limits, .meta { font-size:14px; line-height:1.45; color:var(--dim); }
+  .limits { font-size:12px; }
+  .file { display:flex; align-items:center; justify-content:center; min-height:52px; border-radius:999px;
+          border:1px solid rgba(244,241,234,.28); background:rgba(244,241,234,.08); font-weight:700; cursor:pointer; }
+  .file input { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+  .file:focus-within { border-color:var(--ink); }
+  fieldset { border:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+  legend { font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--dim); margin-bottom:2px; }
+  .choice { display:flex; gap:10px; align-items:flex-start; padding:10px 14px; border-radius:16px;
+            border:1px solid rgba(244,241,234,.16); background:rgba(244,241,234,.05); cursor:pointer; }
+  .choice:has(input:checked) { border-color:var(--ink); background:rgba(244,241,234,.12); }
+  .choice:has(input:disabled) { opacity:.45; cursor:default; }
+  .choice input { margin-top:3px; accent-color:#f4f1ea; }
+  .choice .txt { flex:1; min-width:0; color:var(--ink); }
+  .choice b { display:block; font-size:15px; }
+  .choice .txt span { display:block; font-size:12px; color:var(--dim); line-height:1.35; margin-top:1px; }
+  .choice.best .txt span { color:#f4f1ea; font-weight:650; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  label.num { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:600; color:var(--dim); }
+  label.num input { font:inherit; font-size:16px; font-weight:500; color:var(--ink); background:rgba(244,241,234,.08);
+                    border:1px solid rgba(244,241,234,.16); border-radius:999px; padding:10px 14px; width:100%; color-scheme:dark; }
+  .range { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:600; color:var(--dim); }
+  .range input { width:100%; accent-color:#f4f1ea; }
+  .range:has(input:disabled) { opacity:.45; }
+  .actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  button { font:inherit; cursor:pointer; }
+  .go { border:0; border-radius:999px; padding:12px 18px; background:var(--ink); color:#0b0b0b; font-weight:750; font-size:15px; }
+  .go:disabled { opacity:.35; cursor:default; }
+  .cancel { border:0; background:none; color:var(--dim); font-size:14px; text-decoration:underline; }
+  .track { height:8px; border-radius:99px; background:rgba(244,241,234,.14); overflow:hidden; }
+  .track > span { display:block; height:100%; width:0; background:#9fc7ff; border-radius:inherit; }
+  #status { min-height:1.3em; font-size:14px; line-height:1.4; }
+  #status.error { color:#ff8a7a; }
+  .download { display:inline-flex; align-items:center; justify-content:center; text-decoration:none; font-weight:750;
+              background:var(--ink); color:#0b0b0b; border-radius:999px; padding:12px 18px; }
+  .files { list-style:none; padding:0; display:flex; flex-direction:column; gap:8px; }
+  .files a { display:flex; justify-content:space-between; gap:10px; padding:10px 14px; border-radius:16px; text-decoration:none;
+             color:var(--ink); border:1px solid rgba(244,241,234,.16); background:rgba(244,241,234,.05); font-size:14px; font-weight:600; }
+  .files a span:first-child { min-width:0; overflow-wrap:anywhere; }
+  .files a span:last-child { color:var(--dim); font-weight:500; white-space:nowrap; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="./">‹ Back</a>
+  <h1 class="title">Picture Converter</h1>
+  <span class="sp"></span>
+</header>
+<main>
+  <p class="lead">Pick one or more pictures, like iPhone HEIC photos or screenshots, and convert them here. They stay on this device. Nothing is uploaded.</p>
+  <label class="file" id="fileLabel">Choose pictures
+    <input id="file" type="file" multiple accept="image/*,image/heic,image/heif,.heic,.heif,.jpg,.jpeg,.png,.webp,.gif,.bmp,.tif,.tiff,.avif,.svg">
+  </label>
+  <p class="meta" id="meta"></p>
+  <fieldset>
+    <legend>Format</legend>
+    <label class="choice best"><input type="radio" name="format" value="jpg" checked><span class="txt"><b>JPG</b><span>Best for sharing and uploads</span></span></label>
+    <label class="choice"><input type="radio" name="format" value="png"><span class="txt"><b>PNG</b><span>Sharp edges, keeps transparency</span></span></label>
+    <label class="choice"><input type="radio" name="format" value="webp"><span class="txt"><b>WebP</b><span id="webpNote">Small files for websites</span></span></label>
+    <label class="choice"><input type="radio" name="format" value="avif"><span class="txt"><b>AVIF</b><span id="avifNote">Checking if this browser can make AVIF…</span></span></label>
+    <label class="choice"><input type="radio" name="format" value="gif"><span class="txt"><b>GIF</b><span>256 colors, for old apps and forums</span></span></label>
+    <label class="choice"><input type="radio" name="format" value="bmp"><span class="txt"><b>BMP</b><span>Uncompressed, for older Windows apps</span></span></label>
+    <label class="choice"><input type="radio" name="format" value="tiff"><span class="txt"><b>TIFF</b><span>Uncompressed, for print and editing</span></span></label>
+    <label class="choice"><input type="radio" name="format" value="ico"><span class="txt"><b>ICO</b><span>Website or Windows icon, up to 256 px</span></span></label>
+    <label class="choice"><input type="radio" name="format" value="pdf"><span class="txt"><b>PDF</b><span>One page per picture, for forms and printing</span></span></label>
+    <label class="choice"><input type="radio" name="format" value="heic" disabled><span class="txt"><b>HEIC</b><span>Not supported. Browsers can't make HEIC files. Pick JPG instead.</span></span></label>
+  </fieldset>
+  <label class="range" id="qualityBox">Quality: <span id="qualityText">85</span>
+    <input id="quality" type="range" min="10" max="100" step="1" value="85">
+  </label>
+  <div class="row2">
+    <label class="num">Max width (px)<input id="maxW" type="number" min="1" step="1" placeholder="any" inputmode="numeric"></label>
+    <label class="num">Max height (px)<input id="maxH" type="number" min="1" step="1" placeholder="any" inputmode="numeric"></label>
+  </div>
+  <p class="hint" id="hint"></p>
+  <div class="actions">
+    <button class="go" id="go" type="button" disabled>Convert</button>
+    <button class="cancel" id="cancel" type="button" hidden>Cancel</button>
+  </div>
+  <div class="track" id="track" hidden role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progress"><span id="bar"></span></div>
+  <p id="status" role="status"></p>
+  <a class="download" id="download" hidden>Download</a>
+  <ul class="files" id="files" hidden></ul>
+  <p class="hint" id="saveHint" hidden>On iPhone, if the file opens instead of saving, tap the share button and choose Save to Files.</p>
+  <p class="limits">Reads HEIC, JPG, PNG, WebP, GIF, BMP, TIFF, AVIF, and SVG. Only the first frame of an animated GIF is kept. HEIC output is not supported, because browsers can't make HEIC files. AVIF and WebP output depend on the browser; this page checks and turns them off when it can't make them. HEIC and TIFF pictures this browser can't open, GIF output, and ZIPs need a small helper downloaded once. iPhone: pictures over about 16 megapixels are scaled down to fit Safari's memory limit, and the page says when it does. This works in Safari on iPhone and in Chrome or Safari on a computer.</p>
+</main>
+<script src="image-encoders.js"></script>
+<script>
+(() => {
+  // Helpers come from jsDelivr pinned to exact versions. Every download is checked against its
+  // SHA-384 hash before it runs, and kept in a cache so it works with no signal next time.
+  const CDNS = ["https://cdn.jsdelivr.net/npm/", "https://unpkg.com/"];
+  const LIBS = {
+    heic: { path: "heic2any@0.0.4/dist/heic2any.min.js", sri: "sha384-OTofQ0MEeiSgh62havBcemCIK0gqj809wX6UA0uPISNMRnR6NZyCdGzX3SbLrgwL", global: "heic2any" },
+    // UTIF reads deflate-compressed TIFFs with pako, its own dependency, so pako loads first.
+    pako: { path: "pako@1.0.11/dist/pako_inflate.min.js", sri: "sha384-eVEAceNXm4nXk77ToJFE5Yyd50iOqdwXwefI35sH/rqeSTw99+DhTt4CzWZU+xBz", global: "pako" },
+    utif: { path: "utif@3.1.0/UTIF.js", sri: "sha384-RyBmXHdfZ/Uon+ud+/AqSyWpUWnKYt2tkRG/P4gWoRUGDU+qIAV3tGBPNlYTBZEF", global: "UTIF" },
+    gif: { path: "gifenc@1.0.3/dist/gifenc.esm.js", sri: "sha384-P7/5O5/b1yQQnqgcqktjBKyP5irxx5L0p6ft3eD1i3ASjVm03RkbLOmZkKr6qFHb", module: true },
+    zip: { path: "jszip@3.10.1/dist/jszip.min.js", sri: "sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG", global: "JSZip" }
+  };
+  const CACHE = "dl-image-libs-1";
+  const MB = 1024 * 1024;
+  const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  // Safari won't draw a canvas bigger than 16,777,216 pixels; desktops get more room.
+  const MAX_AREA = ios ? 16777216 : 50000000;
+  const $ = id => document.getElementById(id);
+  const E = window.ImageEncoders;
+  const formats = {
+    jpg:  { ext:"jpg",  mime:"image/jpeg",               label:"JPG",  lossy:true,  flat:true },
+    png:  { ext:"png",  mime:"image/png",                label:"PNG" },
+    webp: { ext:"webp", mime:"image/webp",               label:"WebP", lossy:true },
+    avif: { ext:"avif", mime:"image/avif",               label:"AVIF", lossy:true },
+    gif:  { ext:"gif",  mime:"image/gif",                label:"GIF" },
+    bmp:  { ext:"bmp",  mime:"image/bmp",                label:"BMP",  flat:true },
+    tiff: { ext:"tiff", mime:"image/tiff",               label:"TIFF" },
+    ico:  { ext:"ico",  mime:"image/x-icon",             label:"ICO" },
+    pdf:  { ext:"pdf",  mime:"application/pdf",          label:"PDF",  lossy:true, flat:true }
+  };
+
+  let picked = [], urls = [], busy = false, cancelFlag = false;
+  const loaded = {};
+
+  const pretty = n => n < 1024 ? n + " B" : n < MB ? (n / 1024).toFixed(n < 10 * 1024 ? 1 : 0) + " KB" : (n / MB).toFixed(n < 10 * MB ? 1 : 0) + " MB";
+  const format = () => document.querySelector('input[name="format"]:checked').value;
+  const baseName = name => ((name || "picture").replace(/\.[^.]+$/, "").replace(/[^\w.\- ()]+/g, "").trim()) || "picture";
+  const kindOf = file => {
+    const m = (file.name || "").toLowerCase().match(/\.([a-z0-9]+)$/);
+    const ext = m ? m[1] : "", type = (file.type || "").toLowerCase();
+    if (/^hei[cf]$/.test(ext) || /hei[cf]/.test(type)) return "heic";
+    if (/^tiff?$/.test(ext) || type.includes("tiff")) return "tiff";
+    if (ext === "svg" || type.includes("svg")) return "svg";
+    return "other";
+  };
+  function setProgress(p, text) {
+    const n = Math.max(0, Math.min(1, p || 0));
+    $("track").hidden = false;
+    $("bar").style.width = Math.round(n * 100) + "%";
+    $("track").setAttribute("aria-valuenow", String(Math.round(n * 100)));
+    if (text) setStatus(text, false);
+  }
+  function setStatus(text, isError) {
+    const s = $("status");
+    s.textContent = text || "";
+    s.classList.toggle("error", !!isError);
+  }
+  function clearResults() {
+    urls.forEach(u => URL.revokeObjectURL(u));
+    urls = [];
+    $("download").hidden = true;
+    $("files").hidden = true;
+    $("files").textContent = "";
+    $("saveHint").hidden = true;
+  }
+
+  function refreshOptions() {
+    const fmt = format();
+    $("quality").disabled = !formats[fmt].lossy;
+    $("qualityText").textContent = $("quality").value;
+    $("hint").textContent = {
+      jpg: "JPG has no transparency, so see-through parts turn white. Leave Max width and height blank to keep the full size.",
+      png: "PNG is lossless, so the quality slider isn't used. Files can be large for photos.",
+      webp: "WebP keeps transparency. Lower quality makes smaller files.",
+      avif: "AVIF makes the smallest files and keeps transparency. Lower quality makes smaller files.",
+      gif: "GIF is limited to 256 colors, so photos can look grainy. Only the first frame of an animated picture is kept.",
+      bmp: "BMP is uncompressed and has no transparency, so see-through parts turn white. Files are large.",
+      tiff: "TIFF is uncompressed and keeps transparency. Files are large.",
+      ico: "Icons are scaled to fit 256 x 256 and keep transparency. A square picture works best.",
+      pdf: "Each picture becomes a one-page PDF, saved as a JPG inside, so the quality slider applies."
+    }[fmt];
+    if (!busy) $("go").textContent = "Convert to " + formats[fmt].label;
+  }
+  document.querySelectorAll('input[name="format"]').forEach(el => el.addEventListener("change", refreshOptions));
+  $("quality").addEventListener("input", () => { $("qualityText").textContent = $("quality").value; });
+  refreshOptions();
+
+  // The canvas quietly hands back a PNG when it can't make a format, so check what came out.
+  function canEncode(mime) {
+    return new Promise(resolve => {
+      try {
+        const c = document.createElement("canvas");
+        c.width = c.height = 2;
+        c.toBlob(b => resolve(!!b && b.type === mime), mime, 0.5);
+      } catch (e) { resolve(false); }
+    });
+  }
+  async function checkEncoders() {
+    const [webp, avif] = await Promise.all([canEncode("image/webp"), canEncode("image/avif")]);
+    const off = (value, noteId, text) => {
+      const input = document.querySelector('input[name="format"][value="' + value + '"]');
+      input.disabled = true;
+      $(noteId).textContent = text;
+      if (input.checked) { document.querySelector('input[name="format"][value="jpg"]').checked = true; refreshOptions(); }
+    };
+    if (!webp) off("webp", "webpNote", "This browser can't make WebP. Try Chrome.");
+    if (avif) $("avifNote").textContent = "Smallest files, for newer browsers";
+    else off("avif", "avifNote", "This browser can't make AVIF. Try Chrome on a computer.");
+  }
+  checkEncoders();
+
+  $("file").addEventListener("change", () => {
+    picked = [...($("file").files || [])];
+    clearResults();
+    setStatus("");
+    $("track").hidden = true;
+    $("go").disabled = !picked.length;
+    if (!picked.length) { $("meta").textContent = ""; return; }
+    const total = picked.reduce((n, f) => n + f.size, 0);
+    $("meta").textContent = picked.length === 1
+      ? picked[0].name + " · " + pretty(total)
+      : picked.length + " pictures · " + pretty(total) + " · They'll come back in one ZIP, or one at a time below it.";
+  });
+
+  async function sriOk(bytes, sri) {
+    if (!(window.crypto && crypto.subtle)) return false;
+    const d = new Uint8Array(await crypto.subtle.digest("SHA-384", bytes));
+    let s = "";
+    for (const b of d) s += String.fromCharCode(b);
+    return "sha384-" + btoa(s) === sri;
+  }
+  async function fetchLib(lib) {
+    let cache = null;
+    try { cache = await caches.open(CACHE); } catch (e) {}
+    for (const cdn of CDNS) {
+      const url = cdn + lib.path;
+      try {
+        if (cache) {
+          const hit = await cache.match(url);
+          if (hit) {
+            const bytes = new Uint8Array(await hit.arrayBuffer());
+            if (await sriOk(bytes, lib.sri)) return bytes;
+            await cache.delete(url);
+          }
+        }
+        // integrity makes the browser refuse anything that doesn't match the pinned file.
+        const res = await fetch(url, { integrity: lib.sri, mode: "cors", credentials: "omit" });
+        if (!res.ok) throw new Error("helper " + res.status);
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        if (cache) { try { await cache.put(url, new Response(bytes.slice().buffer, { headers: { "Content-Type": "text/javascript" } })); } catch (e) {} }
+        return bytes;
+      } catch (e) {}
+    }
+    throw new Error(navigator.onLine ? "Couldn't download a helper this needs. Check your connection and try again." : "Connect to the internet once so this page can download a helper it needs. After that it works with no signal.");
+  }
+  function loadLib(name) {
+    if (loaded[name]) return loaded[name];
+    const lib = LIBS[name];
+    loaded[name] = (async () => {
+      const bytes = await fetchLib(lib);
+      const url = URL.createObjectURL(new Blob([bytes], { type: "text/javascript" }));
+      if (lib.module) return import(url);
+      await new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = url;
+        s.onload = resolve;
+        s.onerror = () => reject(new Error("helper script"));
+        document.head.append(s);
+      });
+      if (!window[lib.global]) throw new Error("helper script");
+      return window[lib.global];
+    })();
+    loaded[name].catch(() => { delete loaded[name]; });
+    return loaded[name];
+  }
+
+  function loadImg(blob) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.decoding = "async";
+      img.onload = () => resolve({ img, url });
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("unreadable")); };
+      img.src = url;
+    });
+  }
+  // An SVG with no width and height has no size of its own (Chrome says 300 x 150, Safari 0),
+  // so make it 1024 wide in the shape of its viewBox. Returns null when the SVG gives a size.
+  async function svgSize(file) {
+    const text = await file.text();
+    const tag = (text.match(/<svg\b[^>]*>/i) || [""])[0];
+    if (/\swidth\s*=\s*["']?\s*[\d.]+(px)?\s*["'\s>]/i.test(tag) && /\sheight\s*=\s*["']?\s*[\d.]+(px)?\s*["'\s>]/i.test(tag)) return null;
+    const m = tag.match(/viewBox\s*=\s*["']\s*[-\d.e]+[\s,]+[-\d.e]+[\s,]+([\d.e]+)[\s,]+([\d.e]+)/i);
+    const w = m ? parseFloat(m[1]) : 0, h = m ? parseFloat(m[2]) : 0;
+    if (w > 0 && h > 0) return { width: 1024, height: Math.max(1, Math.round(1024 * h / w)) };
+    return { width: 1024, height: 1024 };
+  }
+  // Returns something drawImage can use, with its size and a cleanup.
+  async function decode(file) {
+    const kind = kindOf(file);
+    const blob = kind === "svg" ? new Blob([file], { type: "image/svg+xml" }) : file;
+    let native = null;
+    try { native = await loadImg(blob); } catch (e) {}
+    if (native) {
+      let w = native.img.naturalWidth, h = native.img.naturalHeight;
+      if (kind === "svg") {
+        const own = await svgSize(file);
+        if (own) ({ width: w, height: h } = own);
+      }
+      if (w && h) return { source: native.img, width: w, height: h, done: () => URL.revokeObjectURL(native.url) };
+      URL.revokeObjectURL(native.url);
+    }
+    if (kind === "heic") {
+      setStatus("Downloading the HEIC reader (about 1.3 MB, once)…");
+      const heic2any = await loadLib("heic");
+      let out = await heic2any({ blob: file, toType: "image/png" });
+      if (Array.isArray(out)) out = out[0];
+      const r = await loadImg(out);
+      return { source: r.img, width: r.img.naturalWidth, height: r.img.naturalHeight, done: () => URL.revokeObjectURL(r.url) };
+    }
+    if (kind === "tiff") {
+      await loadLib("pako");
+      const UTIF = await loadLib("utif");
+      const buf = await file.arrayBuffer();
+      const pages = UTIF.decode(buf);
+      // Some TIFFs start with a thumbnail; use the biggest picture inside.
+      let page = null;
+      for (const p of pages) {
+        UTIF.decodeImage(buf, p, pages);
+        if (p.width && p.height && (!page || p.width * p.height > page.width * page.height)) page = p;
+      }
+      if (!page) throw new Error("unreadable");
+      const c = document.createElement("canvas");
+      c.width = page.width; c.height = page.height;
+      c.getContext("2d").putImageData(new ImageData(new Uint8ClampedArray(UTIF.toRGBA8(page).buffer, 0, page.width * page.height * 4), page.width, page.height), 0, 0);
+      return { source: c, width: page.width, height: page.height, done: () => { c.width = c.height = 0; } };
+    }
+    throw new Error("unreadable");
+  }
+
+  const toBlob = (canvas, mime, q) => new Promise((resolve, reject) =>
+    canvas.toBlob(b => b ? resolve(b) : reject(new Error("encode")), mime, q));
+  const bytesOf = async blob => new Uint8Array(await blob.arrayBuffer());
+
+  async function convertOne(file, fmt, opts) {
+    const f = formats[fmt];
+    const pic = await decode(file);
+    const canvas = document.createElement("canvas");
+    try {
+      const box = fmt === "ico"
+        ? { maxWidth: Math.min(256, opts.maxWidth || 256), maxHeight: Math.min(256, opts.maxHeight || 256), maxArea: MAX_AREA }
+        : { maxWidth: opts.maxWidth, maxHeight: opts.maxHeight, maxArea: MAX_AREA };
+      const size = E.fitSize(pic.width, pic.height, box);
+      const memoryShrunk = size.width < E.fitSize(pic.width, pic.height, { maxWidth: box.maxWidth, maxHeight: box.maxHeight }).width;
+      canvas.width = size.width; canvas.height = size.height;
+      const ctx = canvas.getContext("2d");
+      if (f.flat) { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, size.width, size.height); }
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(pic.source, 0, 0, size.width, size.height);
+      pic.done();
+      let blob;
+      if (fmt === "jpg" || fmt === "png" || fmt === "webp" || fmt === "avif") {
+        blob = await toBlob(canvas, f.mime, opts.quality);
+        if (blob.type !== f.mime) throw new Error("This browser can't make " + f.label + ".");
+      } else if (fmt === "ico") {
+        blob = new Blob([E.encodeICO(await bytesOf(await toBlob(canvas, "image/png")), size.width, size.height)], { type: f.mime });
+      } else if (fmt === "pdf") {
+        blob = new Blob([E.encodePDF(await bytesOf(await toBlob(canvas, "image/jpeg", opts.quality)))], { type: f.mime });
+      } else {
+        const rgba = ctx.getImageData(0, 0, size.width, size.height).data;
+        if (fmt === "bmp") blob = new Blob([E.encodeBMP(rgba, size.width, size.height)], { type: f.mime });
+        else if (fmt === "tiff") blob = new Blob([E.encodeTIFF(rgba, size.width, size.height)], { type: f.mime });
+        else {
+          const { GIFEncoder, quantize, applyPalette } = await loadLib("gif");
+          let clear = false;
+          for (let i = 3; i < rgba.length; i += 4) if (rgba[i] < 255) { clear = true; break; }
+          const mode = clear ? "rgba4444" : "rgb565";
+          const palette = quantize(rgba, 256, { format: mode, oneBitAlpha: clear });
+          const index = applyPalette(rgba, palette, mode);
+          const t = clear ? palette.findIndex(p => p[3] === 0) : -1;
+          const gif = GIFEncoder();
+          gif.writeFrame(index, size.width, size.height, { palette, transparent: t >= 0, transparentIndex: Math.max(0, t) });
+          gif.finish();
+          blob = new Blob([gif.bytes()], { type: f.mime });
+        }
+      }
+      return { blob, width: size.width, height: size.height, memoryShrunk };
+    } finally {
+      canvas.width = canvas.height = 0; // let Safari free the memory right away
+    }
+  }
+
+  function addLink(list, blob, filename) {
+    const url = URL.createObjectURL(blob);
+    urls.push(url);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    const n = document.createElement("span"), s = document.createElement("span");
+    n.textContent = filename; s.textContent = pretty(blob.size);
+    a.append(n, s);
+    const li = document.createElement("li");
+    li.append(a);
+    list.append(li);
+  }
+  function offerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    urls.push(url);
+    const a = $("download");
+    a.href = url;
+    a.download = filename;
+    a.textContent = "Download " + filename + " (" + pretty(blob.size) + ")";
+    a.hidden = false;
+    $("saveHint").hidden = false;
+  }
+  const readMax = id => {
+    const raw = $(id).value.trim();
+    if (raw === "") return 0;
+    const n = Math.floor(Number(raw));
+    return Number.isFinite(n) && n > 0 ? n : NaN;
+  };
+
+  $("cancel").onclick = () => { cancelFlag = true; setStatus("Canceling after this picture…"); };
+
+  $("go").onclick = async () => {
+    if (busy || !picked.length) return;
+    const fmt = format(), f = formats[fmt];
+    const maxWidth = readMax("maxW"), maxHeight = readMax("maxH");
+    if (Number.isNaN(maxWidth) || Number.isNaN(maxHeight)) { setStatus("Use whole pixels for Max width and height, like 1920, or leave them blank.", true); return; }
+    const opts = { maxWidth, maxHeight, quality: Number($("quality").value) / 100 };
+    busy = true; cancelFlag = false;
+    $("go").disabled = true; $("cancel").hidden = picked.length < 2;
+    clearResults();
+    const files = picked.slice(), done = [], failed = [], used = {};
+    let shrunk = 0;
+    try {
+      for (let i = 0; i < files.length; i++) {
+        if (cancelFlag) break;
+        const file = files[i];
+        setProgress(i / files.length, files.length > 1 ? "Converting " + (i + 1) + " of " + files.length + ": " + file.name + "…" : "Converting " + file.name + "…");
+        try {
+          const r = await convertOne(file, fmt, opts);
+          let name = baseName(file.name) + "." + f.ext;
+          const key = name.toLowerCase();
+          used[key] = (used[key] || 0) + 1;
+          if (used[key] > 1) name = baseName(file.name) + " (" + used[key] + ")." + f.ext;
+          done.push({ name, blob: r.blob });
+          if (r.memoryShrunk) shrunk++;
+        } catch (e) {
+          const msg = String(e && (e.message || e) || "");
+          if (/helper|Connect to the internet|can't make/i.test(msg) && !/helper script/.test(msg)) throw e;
+          failed.push(file.name);
+        }
+      }
+      if (!done.length) {
+        $("track").hidden = true;
+        setStatus(cancelFlag ? "Canceled." : files.length === 1 ? "This picture couldn't be read. Try exporting it again from Photos, or pick a different file." : "None of these pictures could be read.", !cancelFlag);
+        return;
+      }
+      if (done.length === 1) {
+        offerDownload(done[0].blob, done[0].name);
+      } else {
+        setProgress(0.99, "Zipping " + done.length + " files…");
+        const JSZip = await loadLib("zip");
+        const zip = new JSZip();
+        const squeeze = fmt === "bmp" || fmt === "tiff";
+        done.forEach(d => zip.file(d.name, d.blob, squeeze ? { compression: "DEFLATE", compressionOptions: { level: 6 } } : { compression: "STORE" }));
+        const blob = await zip.generateAsync({ type: "blob" }, meta => setProgress(0.99, "Zipping… " + Math.round(meta.percent) + "%"));
+        offerDownload(blob, "pictures-" + f.ext + ".zip");
+        done.forEach(d => addLink($("files"), d.blob, d.name));
+        $("files").hidden = false;
+      }
+      let msg = "Ready. " + done.length + (done.length === 1 ? " picture" : " pictures") + " converted to " + f.label + ".";
+      if (done.length > 1) msg += " The ZIP holds them all, or save them one at a time below.";
+      if (shrunk) msg += " " + shrunk + (shrunk === 1 ? " picture was" : " pictures were") + " scaled down to fit this browser's memory.";
+      if (failed.length) msg += " Couldn't read: " + failed.join(", ") + ".";
+      if (cancelFlag) msg += " Canceled before the rest.";
+      setProgress(1, msg);
+    } catch (e) {
+      $("track").hidden = true;
+      setStatus(String(e && (e.message || e) || "Conversion failed."), true);
+    } finally {
+      busy = false;
+      $("cancel").hidden = true;
+      $("go").disabled = !picked.length;
+      refreshOptions();
+    }
+  };
+})();
+</script>
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+    navigator.serviceWorker.addEventListener("message", e => {
+      if (e.data !== "update-ready" || document.querySelector(".update")) return;
+      const b = document.createElement("button");
+      b.className = "go"; b.textContent = "New version ready · Tap to refresh";
+      b.style.position = "fixed"; b.style.left = "50%"; b.style.bottom = "calc(16px + env(safe-area-inset-bottom))"; b.style.transform = "translateX(-50%)";
+      b.onclick = () => location.reload();
+      document.body.append(b);
+    });
+  }
+</script>
+</body>
+</html>

@@ -4,6 +4,9 @@ Every commit gets a summary and timestamp here (Central Time). Newest first.
 
 ## 2026-10-29
 
+- **v57: Picture Converter** (`image-converter`)
+  New Picture Converter pill in Links, next to Video Converter. Pick one or more pictures (HEIC/HEIF, JPG, PNG, WebP, GIF, BMP, TIFF, AVIF, or SVG) and convert them on the device to JPG, PNG, WebP, AVIF, GIF, BMP, TIFF, ICO, or PDF. Nothing is uploaded. A quality slider covers JPG, WebP, AVIF, and PDF, and an optional max width and height shrinks big photos. Several pictures come back in one ZIP, with each file also listed on its own. WebP and AVIF only show when the browser can make them. HEIC output is not supported, because browsers can't make HEIC files. HEIC and TIFF files the browser can't open, GIF output, and ZIPs use small helpers from jsDelivr pinned to exact versions and checked by hash (heic2any 0.0.4, UTIF 3.1.0 with its pako 1.0.11 for deflate TIFFs, gifenc 1.0.3, JSZip 3.10.1), saved after the first download so they work with no signal. On iPhone, pictures over about 16 megapixels are scaled down to fit Safari's canvas limit. The service worker is v57.
+
 - **3:15 PM CT — v56: Instagram downloader** (`main`)
   New Instagram pill in Links. It opens a small page on the MacBook, the same way SD Organizer does: the phone only shows how to start it. Paste a public Reel or post link and click Download. The video, and every photo or video in a carousel, is saved in a new folder under Downloads/Instagram, with a zip next to it. It runs from ~/Applications/instagram-downloader. No Instagram login. The service worker is v56.
 
