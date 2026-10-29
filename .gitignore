@@ -16,6 +16,8 @@ Thumbs.db
 node_modules/
 dist/
 build/
+.venv/
+__pycache__/
 
 # Large media (keep the app's own small images in img/)
 *.mov
