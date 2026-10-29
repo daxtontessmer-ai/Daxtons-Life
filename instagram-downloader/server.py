@@ -24,6 +24,8 @@ PORT = 8766
 HERE = Path(__file__).resolve().parent
 PAGE = HERE / "web" / "index.html"
 MAX_BODY = 32 * 1024
+# The installed app on GitHub Pages. The path (/Daxtons-Life/, /testing/, /Beta/) is not part of the origin.
+PAGES_ORIGIN = "https://daxtontessmer-ai.github.io"
 
 
 class App:
@@ -275,11 +277,25 @@ def make_handler(app: App):
                 raise downloader.DownloaderError("That request was not understood.")
             return data
 
+        def _cors_origin(self) -> str | None:
+            origin = self.headers.get("Origin")
+            if not origin:
+                return None
+            port = self.server.server_address[1]
+            allowed = {PAGES_ORIGIN, f"http://127.0.0.1:{port}"}
+            return origin if origin in allowed else None
+
         def _cors(self) -> None:
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Access-Control-Allow-Private-Network", "true")
+            origin = self._cors_origin()
+            if not origin:
+                return
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin, Access-Control-Request-Private-Network")
             self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
             self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            # A public page calling this loopback server needs this. Do not send it for any other site.
+            if origin == PAGES_ORIGIN:
+                self.send_header("Access-Control-Allow-Private-Network", "true")
 
         def _send_json(self, code: int, payload: dict, cors: bool = False) -> None:
             self._send(code, json.dumps(payload).encode("utf-8"), "application/json; charset=utf-8", cors=cors)
