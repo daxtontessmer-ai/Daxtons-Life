@@ -1,13 +1,14 @@
 // Keeps the app fast and working with no signal. Bump VERSION whenever files change.
-const VERSION = "v56-instagram-downloader";
-const FILES = ["./", "index.html", "video.html", "editor.html", "manifest.webmanifest", "img/daxton.jpg", "img/icon-180.png"];
+const VERSION = "v57-picture-converter";
+const FILES = ["./", "index.html", "video.html", "editor.html", "image.html", "image-encoders.js", "manifest.webmanifest", "img/daxton.jpg", "img/icon-180.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", e => {
-  // dl-ffmpeg* is the converter engine, saved by the video page. Keep it across app updates.
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION && !k.startsWith("dl-ffmpeg")).map(k => caches.delete(k))))
+  // dl-ffmpeg* is the converter engine, saved by the video page, and dl-image-libs* holds the
+  // picture page's helpers. Keep them across app updates.
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION && !k.startsWith("dl-ffmpeg") && !k.startsWith("dl-image-libs")).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
@@ -27,12 +28,13 @@ self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
   if (url.origin !== self.location.origin) return; // never touch GitHub sync calls
   // The adventure map is its own page and must not be replaced by the home page.
-  // video.html and editor.html are cached on their own so they still open with no signal.
+  // video.html, editor.html, and image.html are cached on their own so they still open with no signal.
   const isVideo = /\/video\.html$/.test(url.pathname);
   const isEditor = /\/editor\.html$/.test(url.pathname);
-  if (e.request.mode === "navigate" && /\.html$/.test(url.pathname) && !/index\.html$/.test(url.pathname) && !isVideo && !isEditor) return;
+  const isImage = /\/image\.html$/.test(url.pathname);
+  if (e.request.mode === "navigate" && /\.html$/.test(url.pathname) && !/index\.html$/.test(url.pathname) && !isVideo && !isEditor && !isImage) return;
   const isPage = e.request.mode === "navigate";
-  const pageFile = isEditor ? "editor.html" : isVideo ? "video.html" : "index.html";
+  const pageFile = isImage ? "image.html" : isEditor ? "editor.html" : isVideo ? "video.html" : "index.html";
   const key = isPage ? pageFile : e.request;
   const cachedP = caches.open(VERSION).then(c => c.match(key, { ignoreSearch: isPage }));
   // [response for the page, spare copy for the cache]

@@ -1150,6 +1150,12 @@
     videoLink.append(document.createTextNode("Video Converter "));
     videoLink.insertAdjacentHTML("beforeend", CHEV);
     linkPills.append(videoLink);
+    // ---------- Picture Converter: HEIC, PNG, and more, converted in the browser on its own page ----------
+    const imageLink = el("a", "pill");
+    imageLink.href = "image.html";
+    imageLink.append(document.createTextNode("Picture Converter "));
+    imageLink.insertAdjacentHTML("beforeend", CHEV);
+    linkPills.append(imageLink);
     // ---------- Video Editor: cut a reel in the browser, opened as its own page ----------
     const editorLink = el("a", "pill");
     editorLink.href = "editor.html";
