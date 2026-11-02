@@ -674,15 +674,21 @@
         requestAnimationFrame(() => { const rel = $("rel"), rt = rel.getBoundingClientRect().top, ft = form.getBoundingClientRect().top;
           if (ft < rt || ft > rt + 200) rel.scrollTop += ft - rt - 56; });
       };
-      const setNotes = (it, notes, dates) => {
+      const setNotes = (it, notes, dates, times) => {
         it.notes = notes;
-        if (cfg.dated) { const d = { ...(it.dates || {}), ...(dates || {}) }; for (const k of Object.keys(d)) if (!notes.includes(k) || !d[k]) delete d[k]; it.dates = d; }
+        if (cfg.dated) { const d = { ...(it.dates || {}), ...(dates || {}) }; for (const k of Object.keys(d)) if (!notes.includes(k) || !d[k]) delete d[k]; it.dates = d;
+          // Times sit beside dates, not inside them, so older notes and older copies of the app keep working.
+          const tm = { ...(it.times || {}), ...(times || {}) }; for (const k of Object.keys(tm)) if (!d[k] || !tm[k]) delete tm[k]; it.times = tm; }
         it.updated = now(); changed();
       };
       const todayISO = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+      const nowHM = () => { const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+      const fmtTime = hm => { const [h, m] = hm.split(":").map(Number); return new Date(2000, 0, 1, h, m).toLocaleTimeString([], { hour:"numeric", minute:"2-digit" }); };
       const fmtDate = iso => { const [y, m, d] = iso.split("-").map(Number); const dt = new Date(y, m - 1, d);
         return dt.toLocaleDateString(undefined, { month:"short", day:"numeric", ...(y !== new Date().getFullYear() ? { year:"numeric" } : {}) }); };
       const dateField = (value, label) => { const w = el("label", "datebar"), i = el("input"); i.type = "date"; i.value = value || ""; i.max = todayISO();
+        w.append(el("span", null, label), i); return [w, i]; };
+      const timeField = (value, label) => { const w = el("label", "datebar"), i = el("input"); i.type = "time"; i.value = value || "";
         w.append(el("span", null, label), i); return [w, i]; };
       const remove = it => {
         open.delete(it.id);
@@ -900,8 +906,9 @@
                 const meta = el("div", "meta"), cnt = el("span"), links = el("span", "links");
                 const cancel = el("button", "rm", "Cancel"), del = el("button", "rm", "Delete");
                 cancel.type = del.type = "button";
-                let editDate = null;
-                if (cfg.dated) { const [w, di] = dateField(editing.date ?? (it.dates || {})[t], "Date"); editDate = di; di.oninput = () => { editing.date = di.value; }; n._dateRow = w; }
+                let editDate = null, editTime = null;
+                if (cfg.dated) { const [w, di] = dateField(editing.date ?? (it.dates || {})[t], "Date"); editDate = di; di.oninput = () => { editing.date = di.value; }; n._dateRow = w;
+                  const [tw, ti] = timeField(editing.time ?? (it.times || {})[t], "Time"); editTime = ti; ti.oninput = () => { editing.time = ti.value; }; n._timeRow = tw; }
                 const upd = () => { const w = words(inp.value); cnt.textContent = ""; save.disabled = !w || w > MAX; };
                 inp.oninput = () => { editing.text = inp.value; upd(); }; upd();
                 inp.onkeydown = e => { if (e.key === "Escape") { editing = null; render(); } };
@@ -912,17 +919,17 @@
                   const v = inp.value.trim().replace(/\s+/g, " ");
                   if (!v || words(v) > MAX) return;
                   editing = null;
-                  const nd = {}; if (cfg.dated) { if (v !== t) nd[t] = ""; nd[v] = editDate.value; }
-                  setNotes(it, it.notes.map((x, j) => j === i ? v : x), nd);
+                  const nd = {}, nt = {}; if (cfg.dated) { if (v !== t) nd[t] = nt[t] = ""; nd[v] = editDate.value; nt[v] = editTime.value; }
+                  setNotes(it, it.notes.map((x, j) => j === i ? v : x), nd, nt);
                 };
                 f.append(inp, save); links.append(cancel, del); meta.append(cnt, links);
-                n.append(f); if (n._dateRow) n.append(n._dateRow); n.append(meta); ul.append(n);
+                n.append(f); if (n._dateRow) n.append(n._dateRow, n._timeRow); n.append(meta); ul.append(n);
                 setTimeout(() => { if (document.activeElement !== inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } }, 0);
                 return;
               }
               n.append(el("span", null, t)); n.classList.add("holdable");
               const when = cfg.dated && (it.dates || {})[t];
-              if (when) { const w = el("time", "when", fmtDate(when)); w.dateTime = when; n.append(w); }
+              if (when) { const hm = (it.times || {})[t], w = el("time", "when", fmtDate(when) + (hm ? ", " + fmtTime(hm) : "")); w.dateTime = when + (hm ? "T" + hm : ""); n.append(w); }
               holdable(n, () => { editing = { id: it.id, i, text: t }; render(); });
               ul.append(n);
             });
@@ -938,7 +945,8 @@
               const v = inp.value.trim().replace(/\s+/g, " ");
               if (!v || words(v) > MAX) return;
               drafts[it.id] = ""; delete drafts[it.id + ":date"]; focusId = it.id;
-              setNotes(it, [...(it.notes || []), v], cfg.dated ? { [v]: addDate.value } : null);
+              // A note dated today gets the time right now. A backdated note has no known time, so it stays date-only until one is added by editing it.
+              setNotes(it, [...(it.notes || []), v], cfg.dated ? { [v]: addDate.value } : null, cfg.dated ? { [v]: addDate.value === todayISO() ? nowHM() : "" } : null);
             };
             f.append(inp, add); meta.append(cnt, links);
             box.append(ul, f); if (addDateRow) box.append(addDateRow); box.append(meta); li.append(box);

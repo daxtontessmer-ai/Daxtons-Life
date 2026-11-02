@@ -1,5 +1,5 @@
 // Keeps the app fast and working with no signal. Bump VERSION whenever files change.
-const VERSION = "v57-picture-converter";
+const VERSION = "v58-note-times";
 const FILES = ["./", "index.html", "video.html", "editor.html", "image.html", "image-encoders.js", "manifest.webmanifest", "img/daxton.jpg", "img/icon-180.png"];
 
 self.addEventListener("install", e => {

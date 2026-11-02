@@ -2,6 +2,11 @@
 
 Every commit gets a summary and timestamp here (Central Time). Newest first.
 
+## 2026-11-02
+
+- **3:35 AM CT — v58: Relationship notes record the time** (Claude, `main`)
+  A new note in Relationships now saves the time as well as the date, and shows both, like "Nov 2, 3:32 AM". Notes you already wrote keep just their date. A note backdated to an earlier day stays date-only, since the app can't know what time it happened. Hold any note to add, change, or clear its time. The service worker is v58.
+
 ## 2026-10-29
 
 - **v57: Picture Converter** (`image-converter`)
